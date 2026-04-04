@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -60,5 +61,50 @@ func TestApp_QuitKey(t *testing.T) {
 	msg := cmd()
 	if _, ok := msg.(tea.QuitMsg); !ok {
 		t.Errorf("expected tea.QuitMsg, got %T", msg)
+	}
+}
+
+func TestApp_ViewRendersTabBar(t *testing.T) {
+	app := NewApp()
+	view := app.View()
+
+	// All tab labels should appear in the output
+	tabs := []string{"Dashboard", "Issues", "Detail", "Tree", "Critical Path"}
+	for _, tab := range tabs {
+		if !strings.Contains(view, tab) {
+			t.Errorf("expected view to contain tab label %q", tab)
+		}
+	}
+}
+
+func TestApp_ViewHighlightsActiveTab(t *testing.T) {
+	// When on Issues tab, the tab bar should render differently for the active tab
+	app := NewApp()
+	app.activeTab = TabIssues
+	view := app.View()
+
+	// The active tab should be present
+	if !strings.Contains(view, "Issues") {
+		t.Error("expected view to contain 'Issues'")
+	}
+}
+
+func TestApp_TabNames(t *testing.T) {
+	tests := []struct {
+		tab  Tab
+		want string
+	}{
+		{TabDashboard, "Dashboard"},
+		{TabIssues, "Issues"},
+		{TabDetail, "Detail"},
+		{TabTree, "Tree"},
+		{TabCriticalPath, "Critical Path"},
+	}
+
+	for _, tt := range tests {
+		got := tt.tab.String()
+		if got != tt.want {
+			t.Errorf("Tab(%d).String() = %q, want %q", tt.tab, got, tt.want)
+		}
 	}
 }

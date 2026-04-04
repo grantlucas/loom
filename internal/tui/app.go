@@ -1,6 +1,10 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 // Tab represents a navigable view tab.
 type Tab int
@@ -12,6 +16,24 @@ const (
 	TabTree
 	TabCriticalPath
 )
+
+var tabNames = [...]string{
+	TabDashboard:    "Dashboard",
+	TabIssues:       "Issues",
+	TabDetail:       "Detail",
+	TabTree:         "Tree",
+	TabCriticalPath: "Critical Path",
+}
+
+var allTabs = []Tab{TabDashboard, TabIssues, TabDetail, TabTree, TabCriticalPath}
+
+// String returns the display name for a tab.
+func (t Tab) String() string {
+	if int(t) < len(tabNames) {
+		return tabNames[t]
+	}
+	return "Unknown"
+}
 
 // App is the root Bubble Tea model for Loom.
 type App struct {
@@ -49,5 +71,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a App) View() string {
-	return ""
+	var b strings.Builder
+	b.WriteString(a.renderTabBar())
+	b.WriteString("\n")
+	return b.String()
+}
+
+func (a App) renderTabBar() string {
+	var tabs []string
+	for _, tab := range allTabs {
+		if tab == a.activeTab {
+			tabs = append(tabs, activeTabStyle.Render(tab.String()))
+		} else {
+			tabs = append(tabs, inactiveTabStyle.Render(tab.String()))
+		}
+	}
+	return tabBarStyle.Render(strings.Join(tabs, ""))
 }
