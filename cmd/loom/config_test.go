@@ -2,13 +2,14 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestParseFlags_Defaults(t *testing.T) {
-	cfg, err := ParseFlags([]string{})
+	cfg, err := ParseFlags([]string{}, io.Discard)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -27,7 +28,7 @@ func TestParseFlags_Defaults(t *testing.T) {
 }
 
 func TestParseFlags_Watch(t *testing.T) {
-	cfg, err := ParseFlags([]string{"--watch"})
+	cfg, err := ParseFlags([]string{"--watch"}, io.Discard)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -37,7 +38,7 @@ func TestParseFlags_Watch(t *testing.T) {
 }
 
 func TestParseFlags_Interval(t *testing.T) {
-	cfg, err := ParseFlags([]string{"--interval", "10s"})
+	cfg, err := ParseFlags([]string{"--interval", "10s"}, io.Discard)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -47,7 +48,7 @@ func TestParseFlags_Interval(t *testing.T) {
 }
 
 func TestParseFlags_BeadsDir(t *testing.T) {
-	cfg, err := ParseFlags([]string{"--beads-dir", "/tmp/test"})
+	cfg, err := ParseFlags([]string{"--beads-dir", "/tmp/test"}, io.Discard)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,7 +58,7 @@ func TestParseFlags_BeadsDir(t *testing.T) {
 }
 
 func TestParseFlags_Version(t *testing.T) {
-	cfg, err := ParseFlags([]string{"--version"})
+	cfg, err := ParseFlags([]string{"--version"}, io.Discard)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,9 +68,21 @@ func TestParseFlags_Version(t *testing.T) {
 }
 
 func TestParseFlags_InvalidFlag(t *testing.T) {
-	_, err := ParseFlags([]string{"--bogus"})
+	_, err := ParseFlags([]string{"--bogus"}, io.Discard)
 	if err == nil {
 		t.Error("expected error for invalid flag")
+	}
+}
+
+func TestRun_HelpFlag(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := run([]string{"--help"}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("--help should not return error, got: %v", err)
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "Usage") {
+		t.Errorf("expected help output to contain 'Usage', got %q", output)
 	}
 }
 

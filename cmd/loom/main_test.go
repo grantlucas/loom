@@ -41,7 +41,7 @@ func projectRoot(t *testing.T) string {
 
 func TestBinaryRunsAndExitsCleanly(t *testing.T) {
 	binary := buildBinary(t)
-	cmd := exec.Command(binary)
+	cmd := exec.Command(binary, "--version")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("binary exited with error: %v\n%s", err, out)

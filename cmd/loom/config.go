@@ -15,9 +15,10 @@ type Config struct {
 }
 
 // ParseFlags parses command-line flags into a Config.
-func ParseFlags(args []string) (Config, error) {
+// The output writer receives flag usage text (e.g. for --help).
+func ParseFlags(args []string, output io.Writer) (Config, error) {
 	fs := flag.NewFlagSet("loom", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
+	fs.SetOutput(output)
 
 	var cfg Config
 	fs.BoolVar(&cfg.Watch, "watch", false, "Start in watch mode (auto-refresh)")
