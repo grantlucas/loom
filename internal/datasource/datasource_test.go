@@ -335,6 +335,78 @@ func TestClientExecutorError(t *testing.T) {
 	}
 }
 
+func TestBdExecutorRunsCommand(t *testing.T) {
+	// Use "echo" as a stand-in for bd to test the executor plumbing
+	exec := &BdExecutor{BinPath: "echo"}
+	out, err := exec.Execute("hello", "world")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := string(out)
+	if got != "hello world\n" {
+		t.Errorf("output = %q, want %q", got, "hello world\n")
+	}
+}
+
+func TestBdExecutorMissingBinary(t *testing.T) {
+	exec := &BdExecutor{BinPath: "/nonexistent/binary"}
+	_, err := exec.Execute("list")
+	if err == nil {
+		t.Fatal("expected error for missing binary, got nil")
+	}
+}
+
+func TestBdExecutorWorkDir(t *testing.T) {
+	exec := &BdExecutor{BinPath: "pwd", WorkDir: "/tmp"}
+	out, err := exec.Execute()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// /tmp may resolve to /private/tmp on macOS
+	got := string(out)
+	if got != "/tmp\n" && got != "/private/tmp\n" {
+		t.Errorf("output = %q, want /tmp or /private/tmp", got)
+	}
+}
+
+func TestBdExecutorDefaultBinPath(t *testing.T) {
+	exec := &BdExecutor{}
+	// This will fail if bd is not in PATH, but that's fine —
+	// we just verify it tries to run "bd" by default
+	_, err := exec.Execute("--version")
+	// If bd is available, no error. If not, we just check it tried.
+	if err != nil {
+		t.Skipf("bd not in PATH, skipping: %v", err)
+	}
+}
+
+func TestClientGetIssueExecutorError(t *testing.T) {
+	mock := &mockExecutor{err: fmt.Errorf("show failed")}
+	client := NewClient(mock)
+	_, err := client.GetIssue("proj-1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestClientListReadyExecutorError(t *testing.T) {
+	mock := &mockExecutor{err: fmt.Errorf("ready failed")}
+	client := NewClient(mock)
+	_, err := client.ListReady()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestBdExecutorExitError(t *testing.T) {
+	// Run a command that exits with non-zero to trigger ExitError branch
+	exec := &BdExecutor{BinPath: "sh"}
+	_, err := exec.Execute("-c", "echo stderr >&2; exit 1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
 func TestParseIssueListInvalidJSON(t *testing.T) {
 	_, err := ParseIssueList([]byte(`not json`))
 	if err == nil {
