@@ -95,6 +95,20 @@ func (v *ListView) sortIssues() {
 	})
 }
 
+func statusIndicator(issue datasource.Issue) string {
+	switch issue.Status {
+	case "closed":
+		return "✓"
+	case "in_progress":
+		return "◐"
+	default:
+		if issue.DependencyCount > 0 {
+			return "●"
+		}
+		return "○"
+	}
+}
+
 func (v *ListView) rebuildRows() {
 	rows := make([]table.Row, len(v.issues))
 	for i, issue := range v.issues {
@@ -102,7 +116,7 @@ func (v *ListView) rebuildRows() {
 			issue.ID,
 			fmt.Sprintf("P%d", issue.Priority),
 			issue.IssueType,
-			issue.Status,
+			statusIndicator(issue) + " " + issue.Status,
 			issue.Assignee,
 			issue.Title,
 		}

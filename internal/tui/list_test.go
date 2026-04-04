@@ -127,6 +127,72 @@ func TestListView_SortIndicatorInView(t *testing.T) {
 	}
 }
 
+func TestListView_BlockedIndicator(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{
+			ID:              "a-1",
+			Title:           "Blocked task",
+			Status:          "open",
+			DependencyCount: 2,
+		},
+	})
+
+	view := lv.View()
+	if !strings.Contains(view, "●") {
+		t.Errorf("expected blocked indicator ● in view, got:\n%s", view)
+	}
+}
+
+func TestListView_ReadyIndicator(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{
+			ID:              "a-1",
+			Title:           "Ready task",
+			Status:          "open",
+			DependencyCount: 0,
+		},
+	})
+
+	view := lv.View()
+	if !strings.Contains(view, "○") {
+		t.Errorf("expected ready indicator ○ in view, got:\n%s", view)
+	}
+}
+
+func TestListView_ClosedIndicator(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{
+			ID:     "a-1",
+			Title:  "Done task",
+			Status: "closed",
+		},
+	})
+
+	view := lv.View()
+	if !strings.Contains(view, "✓") {
+		t.Errorf("expected closed indicator ✓ in view, got:\n%s", view)
+	}
+}
+
+func TestListView_InProgressIndicator(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{
+			ID:     "a-1",
+			Title:  "Active task",
+			Status: "in_progress",
+		},
+	})
+
+	view := lv.View()
+	if !strings.Contains(view, "◐") {
+		t.Errorf("expected in_progress indicator ◐ in view, got:\n%s", view)
+	}
+}
+
 func TestListView_RendersIssueData(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
