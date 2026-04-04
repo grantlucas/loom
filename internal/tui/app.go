@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -50,6 +51,7 @@ type App struct {
 	showHelp  bool
 	watchMode bool
 	views     map[Tab]View
+	keys      KeyMap
 }
 
 // NewApp creates a new App with default settings.
@@ -57,6 +59,7 @@ func NewApp() App {
 	return App{
 		activeTab: TabDashboard,
 		views:     make(map[Tab]View),
+		keys:      DefaultKeyMap(),
 	}
 }
 
@@ -67,28 +70,28 @@ func (a App) Init() tea.Cmd {
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "d":
+		switch {
+		case key.Matches(msg, a.keys.Dashboard):
 			a.activeTab = TabDashboard
 			return a, nil
-		case "i":
+		case key.Matches(msg, a.keys.Issues):
 			a.activeTab = TabIssues
 			return a, nil
-		case "t":
+		case key.Matches(msg, a.keys.Tree):
 			a.activeTab = TabTree
 			return a, nil
-		case "c":
+		case key.Matches(msg, a.keys.CriticalPath):
 			a.activeTab = TabCriticalPath
 			return a, nil
-		case "r":
+		case key.Matches(msg, a.keys.Refresh):
 			return a, func() tea.Msg { return RefreshMsg{} }
-		case "w":
+		case key.Matches(msg, a.keys.Watch):
 			a.watchMode = !a.watchMode
 			return a, nil
-		case "?":
+		case key.Matches(msg, a.keys.Help):
 			a.showHelp = !a.showHelp
 			return a, nil
-		case "q", "ctrl+c":
+		case key.Matches(msg, a.keys.Quit):
 			return a, tea.Quit
 		}
 	}
