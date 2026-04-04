@@ -1,3 +1,14 @@
+# Build output
+bin/
+
+# Go
+*.exe
+*.test
+*.out
+coverage.html
+
+# OS
+.DS_Store
 
 # Beads / Dolt files (added by bd init)
 .dolt/
