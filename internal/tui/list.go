@@ -52,6 +52,16 @@ func (v *ListView) SetIssues(issues []datasource.Issue) {
 	v.table.SetRows(rows)
 }
 
+// SelectedIssueID returns the ID of the currently highlighted issue,
+// or empty string if no issues are loaded.
+func (v *ListView) SelectedIssueID() string {
+	row := v.table.SelectedRow()
+	if row == nil {
+		return ""
+	}
+	return row[0]
+}
+
 // Update handles input messages.
 func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd

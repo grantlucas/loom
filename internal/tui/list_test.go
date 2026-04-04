@@ -48,6 +48,39 @@ func TestListView_ShowsIssueCountSingular(t *testing.T) {
 	}
 }
 
+func TestListView_CursorNavigation(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "First"},
+		{ID: "a-2", Title: "Second"},
+		{ID: "a-3", Title: "Third"},
+	})
+
+	// Initial cursor should be at row 0
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Errorf("expected initial selection 'a-1', got %q", got)
+	}
+
+	// Press j to move down
+	lv.Update(keyMsg('j'))
+	if got := lv.SelectedIssueID(); got != "a-2" {
+		t.Errorf("after j, expected 'a-2', got %q", got)
+	}
+
+	// Press k to move back up
+	lv.Update(keyMsg('k'))
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Errorf("after k, expected 'a-1', got %q", got)
+	}
+}
+
+func TestListView_SelectedIssueID_Empty(t *testing.T) {
+	lv := NewListView()
+	if got := lv.SelectedIssueID(); got != "" {
+		t.Errorf("expected empty string for no issues, got %q", got)
+	}
+}
+
 func TestListView_RendersIssueData(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
