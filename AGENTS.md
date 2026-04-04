@@ -46,3 +46,21 @@ bd close <id>         # Complete work
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
+
+## Development Rules
+
+### Test-Driven Development (TDD)
+
+All code changes MUST use the `/tdd` skill. No exceptions.
+
+- Follow the red-green-refactor cycle strictly
+- After each red-green-refactor cycle, create a checkpoint commit
+- Commit messages should reflect the cycle stage (e.g.,
+  `test: add failing test for X`, `feat: implement X to pass tests`,
+  `refactor: clean up X implementation`)
+
+### Test Coverage
+
+- Target 100% test coverage for all code
+- Every new function, method, and branch must have corresponding tests
+- Do NOT merge or consider work complete if coverage drops below 100%
