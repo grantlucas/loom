@@ -61,5 +61,11 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 
 // View renders the issue list table.
 func (v *ListView) View() string {
-	return v.table.View()
+	count := len(v.issues)
+	label := "issues"
+	if count == 1 {
+		label = "issue"
+	}
+	status := statusBarStyle.Render(fmt.Sprintf("%d %s", count, label))
+	return v.table.View() + "\n" + status
 }

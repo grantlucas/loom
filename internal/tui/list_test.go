@@ -19,6 +19,35 @@ func TestListView_RendersColumnHeaders(t *testing.T) {
 	}
 }
 
+func TestListView_ShowsIssueCount(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "First"},
+		{ID: "a-2", Title: "Second"},
+		{ID: "a-3", Title: "Third"},
+	})
+
+	view := lv.View()
+	if !strings.Contains(view, "3 issues") {
+		t.Errorf("expected view to contain '3 issues', got:\n%s", view)
+	}
+}
+
+func TestListView_ShowsIssueCountSingular(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Only one"},
+	})
+
+	view := lv.View()
+	if !strings.Contains(view, "1 issue") {
+		t.Errorf("expected view to contain '1 issue', got:\n%s", view)
+	}
+	if strings.Contains(view, "1 issues") {
+		t.Error("should use singular 'issue' not 'issues'")
+	}
+}
+
 func TestListView_RendersIssueData(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
