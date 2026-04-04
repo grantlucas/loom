@@ -234,3 +234,64 @@ func TestApp_ViewSwitchingChangesDelegate(t *testing.T) {
 		t.Error("expected issues view content after switching to Issues tab")
 	}
 }
+
+func TestApp_Init_ReturnsNil(t *testing.T) {
+	app := NewApp()
+	cmd := app.Init()
+	if cmd != nil {
+		t.Error("Init() should return nil")
+	}
+}
+
+func TestTab_String_OutOfRange(t *testing.T) {
+	tab := Tab(99)
+	if got := tab.String(); got != "Unknown" {
+		t.Errorf("out-of-range Tab.String() = %q, want %q", got, "Unknown")
+	}
+}
+
+func TestApp_Update_NonKeyMsg_NoView(t *testing.T) {
+	// Non-key messages with no registered view should pass through
+	app := NewApp()
+	model, cmd := app.Update(RefreshMsg{})
+	if cmd != nil {
+		t.Error("expected nil cmd for non-key message with no view")
+	}
+	got := model.(App).activeTab
+	if got != TabDashboard {
+		t.Error("active tab should be unchanged")
+	}
+}
+
+func TestApp_Update_NonKeyMsg_WithView(t *testing.T) {
+	// Non-key messages should be delegated to the active view
+	app := NewApp()
+	stub := &stubView{}
+	app.views[TabDashboard] = stub
+
+	app.Update(RefreshMsg{})
+	if !stub.updateCalled {
+		t.Error("expected non-key message to be delegated to active view")
+	}
+}
+
+func TestApp_Update_UnhandledKey_NoView(t *testing.T) {
+	// Unhandled key with no view registered should return nil cmd
+	app := NewApp()
+	_, cmd := app.Update(keyMsg('x'))
+	if cmd != nil {
+		t.Error("expected nil cmd for unhandled key with no view")
+	}
+}
+
+func TestApp_Update_UnhandledKey_WithView(t *testing.T) {
+	// Unhandled keys should be forwarded to the active view
+	app := NewApp()
+	stub := &stubView{}
+	app.views[TabDashboard] = stub
+
+	app.Update(keyMsg('x'))
+	if !stub.updateCalled {
+		t.Error("expected unhandled key to be delegated to active view")
+	}
+}
