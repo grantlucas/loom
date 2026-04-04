@@ -337,15 +337,15 @@ loom/
 ## CLI Interface
 
 ```
-loom                        # Launch TUI in current directory (discovers .beads/)
+loom                        # Launch TUI in current directory (uses .beads/ in cwd)
 loom --watch                # Launch with auto-refresh enabled (5s default)
-loom --watch --interval 10  # Custom refresh interval in seconds
-loom --beads-dir /path      # Explicit .beads directory (same as BEADS_DIR env)
+loom --watch --interval 10s # Custom refresh interval
+loom --beads-dir /path      # Explicit .beads directory
 loom --version              # Print version
 loom --help                 # Usage
 ```
 
-Loom discovers the Beads database the same way `bd` does — by walking up from the current directory looking for `.beads/`. The `--beads-dir` flag (or `BEADS_DIR` env var) overrides this.
+Loom assumes it is run from the root of a project where Beads has been initialized. By default it uses `.beads/` in the current directory. The `--beads-dir` flag overrides this.
 
 ---
 

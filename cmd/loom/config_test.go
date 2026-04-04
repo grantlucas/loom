@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 	"time"
 )
@@ -66,6 +68,26 @@ func TestParseFlags_Version(t *testing.T) {
 
 func TestParseFlags_InvalidFlag(t *testing.T) {
 	_, err := ParseFlags([]string{"--bogus"})
+	if err == nil {
+		t.Error("expected error for invalid flag")
+	}
+}
+
+func TestRun_VersionFlag(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := run([]string{"--version"}, &stdout, &stderr)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	output := stdout.String()
+	if !strings.Contains(output, "loom") {
+		t.Errorf("expected output to contain 'loom', got %q", output)
+	}
+}
+
+func TestRun_InvalidFlag(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := run([]string{"--bogus"}, &stdout, &stderr)
 	if err == nil {
 		t.Error("expected error for invalid flag")
 	}
