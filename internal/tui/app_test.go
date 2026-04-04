@@ -108,3 +108,68 @@ func TestApp_TabNames(t *testing.T) {
 		}
 	}
 }
+
+func TestApp_HelpToggle(t *testing.T) {
+	app := NewApp()
+	if app.showHelp {
+		t.Fatal("help should be hidden by default")
+	}
+
+	// Toggle on
+	model, _ := app.Update(keyMsg('?'))
+	app = model.(App)
+	if !app.showHelp {
+		t.Error("expected help to be visible after pressing ?")
+	}
+
+	// Toggle off
+	model, _ = app.Update(keyMsg('?'))
+	app = model.(App)
+	if app.showHelp {
+		t.Error("expected help to be hidden after pressing ? again")
+	}
+}
+
+func TestApp_HelpOverlayInView(t *testing.T) {
+	app := NewApp()
+	app.showHelp = true
+	view := app.View()
+
+	// Help overlay should show key bindings
+	for _, expected := range []string{"d", "i", "t", "c", "r", "q"} {
+		if !strings.Contains(view, expected) {
+			t.Errorf("help overlay should contain %q", expected)
+		}
+	}
+}
+
+func TestApp_RefreshKey(t *testing.T) {
+	app := NewApp()
+	_, cmd := app.Update(keyMsg('r'))
+	if cmd == nil {
+		t.Fatal("expected refresh command from r key, got nil")
+	}
+	msg := cmd()
+	if _, ok := msg.(RefreshMsg); !ok {
+		t.Errorf("expected RefreshMsg, got %T", msg)
+	}
+}
+
+func TestApp_WatchToggle(t *testing.T) {
+	app := NewApp()
+	if app.watchMode {
+		t.Fatal("watch mode should be off by default")
+	}
+
+	model, _ := app.Update(keyMsg('w'))
+	app = model.(App)
+	if !app.watchMode {
+		t.Error("expected watch mode on after pressing w")
+	}
+
+	model, _ = app.Update(keyMsg('w'))
+	app = model.(App)
+	if app.watchMode {
+		t.Error("expected watch mode off after pressing w again")
+	}
+}

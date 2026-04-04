@@ -35,9 +35,14 @@ func (t Tab) String() string {
 	return "Unknown"
 }
 
+// RefreshMsg signals that data should be re-fetched from bd.
+type RefreshMsg struct{}
+
 // App is the root Bubble Tea model for Loom.
 type App struct {
 	activeTab Tab
+	showHelp  bool
+	watchMode bool
 }
 
 // NewApp creates a new App with default settings.
@@ -63,6 +68,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.activeTab = TabTree
 		case "c":
 			a.activeTab = TabCriticalPath
+		case "r":
+			return a, func() tea.Msg { return RefreshMsg{} }
+		case "w":
+			a.watchMode = !a.watchMode
+		case "?":
+			a.showHelp = !a.showHelp
 		case "q", "ctrl+c":
 			return a, tea.Quit
 		}
@@ -74,7 +85,29 @@ func (a App) View() string {
 	var b strings.Builder
 	b.WriteString(a.renderTabBar())
 	b.WriteString("\n")
+	if a.showHelp {
+		b.WriteString(a.renderHelp())
+		b.WriteString("\n")
+	}
 	return b.String()
+}
+
+func (a App) renderHelp() string {
+	help := []struct{ key, desc string }{
+		{"d", "Dashboard"},
+		{"i", "Issues"},
+		{"t", "Tree"},
+		{"c", "Critical Path"},
+		{"r", "Refresh"},
+		{"w", "Toggle watch mode"},
+		{"?", "Toggle help"},
+		{"q", "Quit"},
+	}
+	var lines []string
+	for _, h := range help {
+		lines = append(lines, "  "+h.key+"  "+h.desc)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (a App) renderTabBar() string {
