@@ -30,6 +30,21 @@ func (a App) Init() tea.Cmd {
 }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "d":
+			a.activeTab = TabDashboard
+		case "i":
+			a.activeTab = TabIssues
+		case "t":
+			a.activeTab = TabTree
+		case "c":
+			a.activeTab = TabCriticalPath
+		case "q", "ctrl+c":
+			return a, tea.Quit
+		}
+	}
 	return a, nil
 }
 
