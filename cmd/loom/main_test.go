@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -44,5 +45,21 @@ func TestBinaryRunsAndExitsCleanly(t *testing.T) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("binary exited with error: %v\n%s", err, out)
+	}
+}
+
+func TestVersionFlag(t *testing.T) {
+	binary := buildBinary(t)
+	cmd := exec.Command(binary, "--version")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("--version exited with error: %v\n%s", err, out)
+	}
+	output := string(out)
+	if !strings.Contains(output, "loom") {
+		t.Errorf("expected version output to contain 'loom', got: %q", output)
+	}
+	if !strings.Contains(output, "dev") {
+		t.Errorf("expected version output to contain 'dev' (default version), got: %q", output)
 	}
 }
