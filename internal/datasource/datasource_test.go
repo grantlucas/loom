@@ -109,3 +109,20 @@ func TestParseIssueList(t *testing.T) {
 		t.Errorf("dep.Type = %q, want %q", dep.Type, "blocks")
 	}
 }
+
+func TestParseIssueListEmpty(t *testing.T) {
+	issues, err := ParseIssueList([]byte(`[]`))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(issues) != 0 {
+		t.Errorf("expected 0 issues, got %d", len(issues))
+	}
+}
+
+func TestParseIssueListInvalidJSON(t *testing.T) {
+	_, err := ParseIssueList([]byte(`not json`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON, got nil")
+	}
+}
