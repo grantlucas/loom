@@ -87,10 +87,8 @@ func (v *ListView) sortIssues() {
 			return a.IssueType < b.IssueType
 		case sortByAssignee:
 			return a.Assignee < b.Assignee
-		case sortByTitle:
-			return a.Title < b.Title
 		default:
-			return a.Priority < b.Priority
+			return a.Title < b.Title
 		}
 	})
 }

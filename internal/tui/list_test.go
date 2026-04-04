@@ -7,6 +7,10 @@ import (
 	"github.com/grantlucas/loom/internal/datasource"
 )
 
+func TestListView_ImplementsViewInterface(t *testing.T) {
+	var _ View = NewListView()
+}
+
 func TestListView_RendersColumnHeaders(t *testing.T) {
 	lv := NewListView()
 	view := lv.View()
@@ -190,6 +194,55 @@ func TestListView_InProgressIndicator(t *testing.T) {
 	view := lv.View()
 	if !strings.Contains(view, "◐") {
 		t.Errorf("expected in_progress indicator ◐ in view, got:\n%s", view)
+	}
+}
+
+func TestListView_SortCyclesThroughAllColumns(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "b-2", Priority: 2, IssueType: "bug", Status: "open", Assignee: "bob", Title: "Zebra"},
+		{ID: "a-1", Priority: 1, IssueType: "task", Status: "in_progress", Assignee: "alice", Title: "Apple"},
+	})
+
+	// Default: sorted by priority — a-1 (P1) first
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("priority sort: expected 'a-1', got %q", got)
+	}
+
+	// s -> sortByStatus: in_progress (a-1) before open (b-2)
+	lv.Update(keyMsg('s'))
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("status sort: expected 'a-1', got %q", got)
+	}
+
+	// s -> sortByID: a-1 before b-2
+	lv.Update(keyMsg('s'))
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("ID sort: expected 'a-1', got %q", got)
+	}
+
+	// s -> sortByType: bug (b-2) before task (a-1)
+	lv.Update(keyMsg('s'))
+	if got := lv.SelectedIssueID(); got != "b-2" {
+		t.Fatalf("type sort: expected 'b-2', got %q", got)
+	}
+
+	// s -> sortByAssignee: alice (a-1) before bob (b-2)
+	lv.Update(keyMsg('s'))
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("assignee sort: expected 'a-1', got %q", got)
+	}
+
+	// s -> sortByTitle: Apple (a-1) before Zebra (b-2)
+	lv.Update(keyMsg('s'))
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("title sort: expected 'a-1', got %q", got)
+	}
+
+	// s -> wraps back to sortByPriority
+	lv.Update(keyMsg('s'))
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("wrapped priority sort: expected 'a-1', got %q", got)
 	}
 }
 
