@@ -38,17 +38,25 @@ func (t Tab) String() string {
 // RefreshMsg signals that data should be re-fetched from bd.
 type RefreshMsg struct{}
 
+// View is the interface that each tab's view must implement.
+type View interface {
+	Update(msg tea.Msg) tea.Cmd
+	View() string
+}
+
 // App is the root Bubble Tea model for Loom.
 type App struct {
 	activeTab Tab
 	showHelp  bool
 	watchMode bool
+	views     map[Tab]View
 }
 
 // NewApp creates a new App with default settings.
 func NewApp() App {
 	return App{
 		activeTab: TabDashboard,
+		views:     make(map[Tab]View),
 	}
 }
 
@@ -62,21 +70,33 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "d":
 			a.activeTab = TabDashboard
+			return a, nil
 		case "i":
 			a.activeTab = TabIssues
+			return a, nil
 		case "t":
 			a.activeTab = TabTree
+			return a, nil
 		case "c":
 			a.activeTab = TabCriticalPath
+			return a, nil
 		case "r":
 			return a, func() tea.Msg { return RefreshMsg{} }
 		case "w":
 			a.watchMode = !a.watchMode
+			return a, nil
 		case "?":
 			a.showHelp = !a.showHelp
+			return a, nil
 		case "q", "ctrl+c":
 			return a, tea.Quit
 		}
+	}
+
+	// Delegate to active view
+	if v, ok := a.views[a.activeTab]; ok {
+		cmd := v.Update(msg)
+		return a, cmd
 	}
 	return a, nil
 }
@@ -88,6 +108,8 @@ func (a App) View() string {
 	if a.showHelp {
 		b.WriteString(a.renderHelp())
 		b.WriteString("\n")
+	} else if v, ok := a.views[a.activeTab]; ok {
+		b.WriteString(v.View())
 	}
 	return b.String()
 }

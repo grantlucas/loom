@@ -173,3 +173,64 @@ func TestApp_WatchToggle(t *testing.T) {
 		t.Error("expected watch mode off after pressing w again")
 	}
 }
+
+// stubView is a minimal View implementation for testing dispatching.
+type stubView struct {
+	updateCalled bool
+	lastMsg      tea.Msg
+	content      string
+}
+
+func (v *stubView) Update(msg tea.Msg) tea.Cmd {
+	v.updateCalled = true
+	v.lastMsg = msg
+	return nil
+}
+
+func (v *stubView) View() string {
+	return v.content
+}
+
+func TestApp_ViewDelegatesToActiveView(t *testing.T) {
+	app := NewApp()
+	stub := &stubView{content: "dashboard content here"}
+	app.views[TabDashboard] = stub
+
+	view := app.View()
+	if !strings.Contains(view, "dashboard content here") {
+		t.Error("expected View() to include active view's content")
+	}
+}
+
+func TestApp_UpdateDelegatesToActiveView(t *testing.T) {
+	app := NewApp()
+	stub := &stubView{}
+	app.views[TabDashboard] = stub
+
+	// Send a non-global key that should be forwarded to the view
+	app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !stub.updateCalled {
+		t.Error("expected Update to delegate to active view")
+	}
+}
+
+func TestApp_ViewSwitchingChangesDelegate(t *testing.T) {
+	app := NewApp()
+	dashStub := &stubView{content: "dash"}
+	issueStub := &stubView{content: "issues"}
+	app.views[TabDashboard] = dashStub
+	app.views[TabIssues] = issueStub
+
+	// Switch to issues
+	model, _ := app.Update(keyMsg('i'))
+	app = model.(App)
+	// Re-attach views since App is value type
+	app.views[TabDashboard] = dashStub
+	app.views[TabIssues] = issueStub
+
+	view := app.View()
+	if !strings.Contains(view, "issues") {
+		t.Error("expected issues view content after switching to Issues tab")
+	}
+}
