@@ -1,0 +1,74 @@
+package datasource
+
+import (
+	"fmt"
+	"os/exec"
+)
+
+// Executor runs bd CLI commands and returns raw output.
+type Executor interface {
+	Execute(args ...string) ([]byte, error)
+}
+
+// BdExecutor runs the real bd binary.
+type BdExecutor struct {
+	BinPath string
+	WorkDir string
+}
+
+// Execute runs a bd command with the given arguments.
+func (e *BdExecutor) Execute(args ...string) ([]byte, error) {
+	binPath := e.BinPath
+	if binPath == "" {
+		binPath = "bd"
+	}
+	cmd := exec.Command(binPath, args...)
+	if e.WorkDir != "" {
+		cmd.Dir = e.WorkDir
+	}
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("bd %v: %w\n%s", args, err, exitErr.Stderr)
+		}
+		return nil, fmt.Errorf("bd %v: %w", args, err)
+	}
+	return out, nil
+}
+
+// Client provides a high-level API for fetching Beads data.
+type Client struct {
+	exec Executor
+}
+
+// NewClient creates a Client with the given executor.
+func NewClient(exec Executor) *Client {
+	return &Client{exec: exec}
+}
+
+// ListIssues runs bd list --json and returns parsed issues.
+func (c *Client) ListIssues() ([]Issue, error) {
+	data, err := c.exec.Execute("list", "--json")
+	if err != nil {
+		return nil, err
+	}
+	return ParseIssueList(data)
+}
+
+// GetIssue runs bd show <id> --json and returns parsed issue detail.
+func (c *Client) GetIssue(id string) (*IssueDetail, error) {
+	data, err := c.exec.Execute("show", id, "--json")
+	if err != nil {
+		return nil, err
+	}
+	return ParseIssueDetail(data)
+}
+
+// ListReady runs bd ready --json and returns parsed ready issues.
+func (c *Client) ListReady() ([]Issue, error) {
+	data, err := c.exec.Execute("ready", "--json")
+	if err != nil {
+		return nil, err
+	}
+	return ParseIssueList(data)
+}

@@ -227,6 +227,58 @@ func TestParseIssueDetail(t *testing.T) {
 	}
 }
 
+func TestParseIssueDetailInvalidJSON(t *testing.T) {
+	_, err := ParseIssueDetail([]byte(`not json`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON, got nil")
+	}
+}
+
+func TestParseIssueDetailEmptyArray(t *testing.T) {
+	_, err := ParseIssueDetail([]byte(`[]`))
+	if err == nil {
+		t.Fatal("expected error for empty array, got nil")
+	}
+}
+
+// mockExecutor records calls and returns canned responses.
+type mockExecutor struct {
+	calls  [][]string
+	output []byte
+	err    error
+}
+
+func (m *mockExecutor) Execute(args ...string) ([]byte, error) {
+	m.calls = append(m.calls, args)
+	return m.output, m.err
+}
+
+func TestClientListIssues(t *testing.T) {
+	mock := &mockExecutor{
+		output: []byte(`[{"id":"proj-1","title":"Test","status":"open","priority":1,"issue_type":"task","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}]`),
+	}
+	client := NewClient(mock)
+
+	issues, err := client.ListIssues()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(issues) != 1 {
+		t.Fatalf("expected 1 issue, got %d", len(issues))
+	}
+	if issues[0].ID != "proj-1" {
+		t.Errorf("ID = %q, want %q", issues[0].ID, "proj-1")
+	}
+
+	if len(mock.calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(mock.calls))
+	}
+	args := mock.calls[0]
+	if len(args) != 2 || args[0] != "list" || args[1] != "--json" {
+		t.Errorf("args = %v, want [list --json]", args)
+	}
+}
+
 func TestParseIssueListInvalidJSON(t *testing.T) {
 	_, err := ParseIssueList([]byte(`not json`))
 	if err == nil {
