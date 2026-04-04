@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -276,6 +277,61 @@ func TestClientListIssues(t *testing.T) {
 	args := mock.calls[0]
 	if len(args) != 2 || args[0] != "list" || args[1] != "--json" {
 		t.Errorf("args = %v, want [list --json]", args)
+	}
+}
+
+func TestClientGetIssue(t *testing.T) {
+	mock := &mockExecutor{
+		output: []byte(`[{"id":"proj-2","title":"Detail","status":"open","priority":1,"issue_type":"task","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z","dependencies":[],"dependents":[]}]`),
+	}
+	client := NewClient(mock)
+
+	detail, err := client.GetIssue("proj-2")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if detail.ID != "proj-2" {
+		t.Errorf("ID = %q, want %q", detail.ID, "proj-2")
+	}
+
+	args := mock.calls[0]
+	if len(args) != 3 || args[0] != "show" || args[1] != "proj-2" || args[2] != "--json" {
+		t.Errorf("args = %v, want [show proj-2 --json]", args)
+	}
+}
+
+func TestClientListReady(t *testing.T) {
+	mock := &mockExecutor{
+		output: []byte(`[{"id":"proj-3","title":"Ready","status":"open","priority":2,"issue_type":"task","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}]`),
+	}
+	client := NewClient(mock)
+
+	issues, err := client.ListReady()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(issues) != 1 || issues[0].ID != "proj-3" {
+		t.Errorf("unexpected issues: %+v", issues)
+	}
+
+	args := mock.calls[0]
+	if len(args) != 2 || args[0] != "ready" || args[1] != "--json" {
+		t.Errorf("args = %v, want [ready --json]", args)
+	}
+}
+
+func TestClientExecutorError(t *testing.T) {
+	mock := &mockExecutor{
+		err: fmt.Errorf("command failed"),
+	}
+	client := NewClient(mock)
+
+	_, err := client.ListIssues()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "command failed" {
+		t.Errorf("error = %q, want %q", err.Error(), "command failed")
 	}
 }
 
