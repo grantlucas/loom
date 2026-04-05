@@ -536,3 +536,45 @@ func TestListView_SetIssuesReappliesActiveFilter(t *testing.T) {
 		t.Errorf("expected '2 of 3' after SetIssues with active filter, got:\n%s", view)
 	}
 }
+
+func TestListView_Resize_TitleColumnExpandsWithWidth(t *testing.T) {
+	lv := NewListView()
+
+	// Default title width is 40
+	lv.Resize(80, 30)
+	cols80 := lv.table.Columns()
+	titleWidth80 := cols80[5].Width
+
+	lv.Resize(160, 30)
+	cols160 := lv.table.Columns()
+	titleWidth160 := cols160[5].Width
+
+	if titleWidth160 <= titleWidth80 {
+		t.Errorf("expected wider terminal to give wider Title column: got %d at 160w vs %d at 80w",
+			titleWidth160, titleWidth80)
+	}
+}
+
+func TestListView_Resize_FixedColumnsStaySameWidth(t *testing.T) {
+	lv := NewListView()
+	lv.Resize(120, 30)
+	cols := lv.table.Columns()
+
+	// ID=14, P=5, Type=8, Status=12, Assignee=14
+	expectedWidths := []int{14, 5, 8, 12, 14}
+	for i, want := range expectedWidths {
+		if cols[i].Width != want {
+			t.Errorf("column %d (%s): got width %d, want %d", i, cols[i].Title, cols[i].Width, want)
+		}
+	}
+}
+
+func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
+	lv := NewListView()
+	lv.Resize(40, 30) // very narrow
+	cols := lv.table.Columns()
+	titleWidth := cols[5].Width
+	if titleWidth < 10 {
+		t.Errorf("title column should have minimum width of 10, got %d", titleWidth)
+	}
+}

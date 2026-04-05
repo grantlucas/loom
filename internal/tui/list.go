@@ -302,10 +302,33 @@ func (v *ListView) View() string {
 	return v.table.View() + "\n" + status
 }
 
+// Fixed column widths for non-Title columns.
+var fixedColumnWidths = [...]int{14, 5, 8, 12, 14} // ID, P, Type, Status, Assignee
+
+const minTitleWidth = 10
+
 // Resize adapts the list layout to the given terminal dimensions.
 func (v *ListView) Resize(width, height int) {
 	v.width = width
 	v.height = height
+
+	fixedTotal := 0
+	for _, w := range fixedColumnWidths {
+		fixedTotal += w
+	}
+	titleWidth := width - fixedTotal - 2 // 2 for table borders/padding
+	if titleWidth < minTitleWidth {
+		titleWidth = minTitleWidth
+	}
+
+	cols := v.table.Columns()
+	if len(cols) == 6 {
+		for i := 0; i < 5; i++ {
+			cols[i].Width = fixedColumnWidths[i]
+		}
+		cols[5].Width = titleWidth
+		v.table.SetColumns(cols)
+	}
 }
 
 func (v *ListView) displayIssues() []datasource.Issue {
