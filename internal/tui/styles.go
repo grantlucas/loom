@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 var (
 	// Tab bar styles
@@ -77,4 +81,9 @@ func PriorityStyle(priority int) lipgloss.Style {
 		color = priorityColors[4] // default to gray
 	}
 	return lipgloss.NewStyle().Foreground(color)
+}
+
+// StyledPriority returns a color-coded priority string like "P0", "P1", etc.
+func StyledPriority(priority int) string {
+	return PriorityStyle(priority).Render(fmt.Sprintf("P%d", priority))
 }

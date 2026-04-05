@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
@@ -95,6 +97,16 @@ func TestPriorityStyle_ReturnsDistinctColorsPerLevel(t *testing.T) {
 		got := style.GetForeground()
 		if got != wantColor {
 			t.Errorf("PriorityStyle(%d): got foreground %v, want %v", pri, got, wantColor)
+		}
+	}
+}
+
+func TestStyledPriority_ContainsPriorityLabel(t *testing.T) {
+	for pri := 0; pri <= 4; pri++ {
+		result := StyledPriority(pri)
+		want := fmt.Sprintf("P%d", pri)
+		if !strings.Contains(result, want) {
+			t.Errorf("StyledPriority(%d): result %q does not contain %q", pri, result, want)
 		}
 	}
 }
