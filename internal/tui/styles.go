@@ -87,3 +87,15 @@ func PriorityStyle(priority int) lipgloss.Style {
 func StyledPriority(priority int) string {
 	return PriorityStyle(priority).Render(fmt.Sprintf("P%d", priority))
 }
+
+// StatusStyle returns a lipgloss style with the foreground color for the given status.
+func StatusStyle(status string) lipgloss.Style {
+	switch status {
+	case "closed":
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("34"))
+	case "in_progress":
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("226"))
+	default:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
+	}
+}

@@ -111,6 +111,29 @@ func TestStyledPriority_ContainsPriorityLabel(t *testing.T) {
 	}
 }
 
+func TestStatusStyle_ReturnsDistinctColorsPerStatus(t *testing.T) {
+	expected := map[string]lipgloss.Color{
+		"closed":      lipgloss.Color("34"),  // green
+		"in_progress": lipgloss.Color("226"), // yellow
+		"open":        lipgloss.Color("252"), // white
+	}
+	for status, wantColor := range expected {
+		style := StatusStyle(status)
+		got := style.GetForeground()
+		if got != wantColor {
+			t.Errorf("StatusStyle(%q): got foreground %v, want %v", status, got, wantColor)
+		}
+	}
+}
+
+func TestStatusStyle_UnknownStatusDefaultsToOpen(t *testing.T) {
+	style := StatusStyle("unknown")
+	got := style.GetForeground()
+	if got != lipgloss.Color("252") {
+		t.Errorf("StatusStyle(unknown): got foreground %v, want white (252)", got)
+	}
+}
+
 func TestPriorityStyle_UnknownPriorityDefaultsToGray(t *testing.T) {
 	style := PriorityStyle(99)
 	got := style.GetForeground()
