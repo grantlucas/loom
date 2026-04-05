@@ -59,4 +59,22 @@ var (
 	// Filter prompt
 	filterPromptStyle = lipgloss.NewStyle().
 				Bold(true)
+
+	// Priority color map
+	priorityColors = map[int]lipgloss.Color{
+		0: lipgloss.Color("196"), // red
+		1: lipgloss.Color("208"), // orange
+		2: lipgloss.Color("226"), // yellow
+		3: lipgloss.Color("33"),  // blue
+		4: lipgloss.Color("243"), // gray
+	}
 )
+
+// PriorityStyle returns a lipgloss style with the foreground color for the given priority level.
+func PriorityStyle(priority int) lipgloss.Style {
+	color, ok := priorityColors[priority]
+	if !ok {
+		color = priorityColors[4] // default to gray
+	}
+	return lipgloss.NewStyle().Foreground(color)
+}

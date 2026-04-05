@@ -81,3 +81,28 @@ func TestDashboardBarStyle_HasForegroundColor(t *testing.T) {
 		t.Error("dashboard bar style should have a foreground color")
 	}
 }
+
+func TestPriorityStyle_ReturnsDistinctColorsPerLevel(t *testing.T) {
+	expected := map[int]lipgloss.Color{
+		0: lipgloss.Color("196"), // red
+		1: lipgloss.Color("208"), // orange
+		2: lipgloss.Color("226"), // yellow
+		3: lipgloss.Color("33"),  // blue
+		4: lipgloss.Color("243"), // gray
+	}
+	for pri, wantColor := range expected {
+		style := PriorityStyle(pri)
+		got := style.GetForeground()
+		if got != wantColor {
+			t.Errorf("PriorityStyle(%d): got foreground %v, want %v", pri, got, wantColor)
+		}
+	}
+}
+
+func TestPriorityStyle_UnknownPriorityDefaultsToGray(t *testing.T) {
+	style := PriorityStyle(99)
+	got := style.GetForeground()
+	if got != lipgloss.Color("243") {
+		t.Errorf("PriorityStyle(99): got foreground %v, want gray (243)", got)
+	}
+}
