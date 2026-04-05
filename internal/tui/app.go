@@ -64,9 +64,10 @@ type App struct {
 // NewApp creates a new App wired to the given DataSource.
 func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 	views := map[Tab]View{
-		TabDashboard: NewDashboardView(),
-		TabIssues:    NewListView(),
-		TabDetail:    NewDetailView(),
+		TabDashboard:    NewDashboardView(),
+		TabIssues:       NewListView(),
+		TabDetail:       NewDetailView(),
+		TabCriticalPath: NewCriticalPathView(),
 	}
 	ti := textinput.New()
 	ti.Placeholder = "issue ID"
@@ -133,6 +134,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if dv, ok := a.views[TabDashboard].(*DashboardView); ok {
 			dv.SetIssues(msg.Issues)
+		}
+		if cpv, ok := a.views[TabCriticalPath].(*CriticalPathView); ok {
+			cpv.SetIssues(msg.Issues)
 		}
 		return a, nil
 
@@ -217,6 +221,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabIssues:
 			if lv, ok := a.views[TabIssues].(*ListView); ok {
 				id := lv.SelectedIssueID()
+				if id == "" {
+					return a, nil
+				}
+				a.history = nil
+				a.activeTab = TabDetail
+				if dv, ok := a.views[TabDetail].(*DetailView); ok {
+					dv.SetLoading()
+				}
+				return a, a.fetchIssueDetail(id)
+			}
+			return a, nil
+		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabCriticalPath:
+			if cpv, ok := a.views[TabCriticalPath].(*CriticalPathView); ok {
+				id := cpv.SelectedNodeID()
 				if id == "" {
 					return a, nil
 				}

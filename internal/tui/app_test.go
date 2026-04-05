@@ -1291,3 +1291,67 @@ func TestApp_FetchReady_Error_ReturnsErrMsg(t *testing.T) {
 		t.Errorf("expected error 'ready fail', got %q", errMsg.Err.Error())
 	}
 }
+
+func TestNewApp_RegistersCriticalPathView(t *testing.T) {
+	app := newTestApp()
+	v, ok := app.views[TabCriticalPath]
+	if !ok {
+		t.Fatal("expected TabCriticalPath view to be registered")
+	}
+	if _, ok := v.(*CriticalPathView); !ok {
+		t.Errorf("expected *CriticalPathView, got %T", v)
+	}
+}
+
+func TestApp_Update_IssuesLoadedMsg_SetsDataOnCriticalPathView(t *testing.T) {
+	app := newTestApp()
+	issues := []datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	}
+	model, _ := app.Update(IssuesLoadedMsg{Issues: issues})
+	a := model.(App)
+	cpv := a.views[TabCriticalPath].(*CriticalPathView)
+	if len(cpv.chains) == 0 {
+		t.Error("expected chains to be computed on CriticalPathView")
+	}
+}
+
+func TestApp_EnterOnCriticalPath_NavigatesToDetail(t *testing.T) {
+	detail := &datasource.IssueDetail{ID: "a", Title: "First"}
+	ds := &mockDataSource{detail: detail}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabCriticalPath
+	cpv := app.views[TabCriticalPath].(*CriticalPathView)
+	cpv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "First"},
+		{ID: "b", Status: "open", Priority: 1, Title: "Second", Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	})
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabDetail {
+		t.Errorf("expected TabDetail, got %d", a.activeTab)
+	}
+	if cmd == nil {
+		t.Fatal("expected fetch command")
+	}
+}
+
+func TestApp_EnterOnCriticalPath_NoSelection_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabCriticalPath
+	// No issues loaded, so no chains
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabCriticalPath {
+		t.Error("expected to stay on CriticalPath tab when no selection")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd when no selection")
+	}
+}
