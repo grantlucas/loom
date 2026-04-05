@@ -1,7 +1,9 @@
 package datasource
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 )
 
@@ -28,12 +30,25 @@ func (e *BdExecutor) Execute(args ...string) ([]byte, error) {
 	}
 	out, err := cmd.Output()
 	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) || isPathNotFound(binPath, err) {
+			return nil, fmt.Errorf("%w: %w", ErrBdNotFound, err)
+		}
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return nil, fmt.Errorf("bd %v: %w\n%s", args, err, exitErr.Stderr)
 		}
 		return nil, fmt.Errorf("bd %v: %w", args, err)
 	}
 	return out, nil
+}
+
+// isPathNotFound returns true when the error indicates the binary path
+// does not exist on disk (absolute or relative path, not a PATH lookup).
+func isPathNotFound(binPath string, err error) bool {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) && os.IsNotExist(pathErr) {
+		return true
+	}
+	return false
 }
 
 // Client provides a high-level API for fetching Beads data.

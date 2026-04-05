@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -353,6 +354,22 @@ func TestBdExecutorMissingBinary(t *testing.T) {
 	_, err := exec.Execute("list")
 	if err == nil {
 		t.Fatal("expected error for missing binary, got nil")
+	}
+}
+
+func TestBdExecutorMissingBinary_ReturnsErrBdNotFound(t *testing.T) {
+	exec := &BdExecutor{BinPath: "/nonexistent/binary"}
+	_, err := exec.Execute("list")
+	if !errors.Is(err, ErrBdNotFound) {
+		t.Errorf("expected ErrBdNotFound, got %v", err)
+	}
+}
+
+func TestBdExecutorMissingBinaryInPATH_ReturnsErrBdNotFound(t *testing.T) {
+	exec := &BdExecutor{BinPath: "definitely-not-a-real-binary-xyz"}
+	_, err := exec.Execute("list")
+	if !errors.Is(err, ErrBdNotFound) {
+		t.Errorf("expected ErrBdNotFound, got %v", err)
 	}
 }
 
