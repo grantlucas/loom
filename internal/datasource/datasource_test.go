@@ -424,6 +424,26 @@ func TestBdExecutorExitError(t *testing.T) {
 	}
 }
 
+func TestBdExecutorNoBeadsProject_ReturnsErrProjectNotInitialized(t *testing.T) {
+	exec := &BdExecutor{BinPath: "sh"}
+	_, err := exec.Execute("-c", "echo 'Error: no beads database found' >&2; exit 1")
+	if !errors.Is(err, ErrProjectNotInitialized) {
+		t.Errorf("expected ErrProjectNotInitialized, got %v", err)
+	}
+}
+
+func TestBdExecutorExitError_ReturnsBdError(t *testing.T) {
+	exec := &BdExecutor{BinPath: "sh"}
+	_, err := exec.Execute("-c", "echo 'some other error' >&2; exit 1")
+	var bdErr *BdError
+	if !errors.As(err, &bdErr) {
+		t.Fatalf("expected *BdError, got %T: %v", err, err)
+	}
+	if bdErr.Stderr != "some other error" {
+		t.Errorf("Stderr = %q, want %q", bdErr.Stderr, "some other error")
+	}
+}
+
 func TestParseIssueListInvalidJSON(t *testing.T) {
 	_, err := ParseIssueList([]byte(`not json`))
 	if err == nil {

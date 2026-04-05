@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // Executor runs bd CLI commands and returns raw output.
@@ -34,7 +35,11 @@ func (e *BdExecutor) Execute(args ...string) ([]byte, error) {
 			return nil, fmt.Errorf("%w: %w", ErrBdNotFound, err)
 		}
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("bd %v: %w\n%s", args, err, exitErr.Stderr)
+			stderr := string(exitErr.Stderr)
+			if strings.Contains(stderr, "no beads database found") {
+				return nil, fmt.Errorf("%w: %s", ErrProjectNotInitialized, strings.TrimSpace(stderr))
+			}
+			return nil, &BdError{Args: args, Stderr: strings.TrimSpace(stderr), Err: err}
 		}
 		return nil, fmt.Errorf("bd %v: %w", args, err)
 	}
