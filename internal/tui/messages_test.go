@@ -31,3 +31,22 @@ func TestTickMsg_IsTimeAlias(t *testing.T) {
 		t.Error("TickMsg should be convertible to time.Time")
 	}
 }
+
+func TestIssueDetailLoadedMsg_CarriesDetail(t *testing.T) {
+	detail := &datasource.IssueDetail{ID: "proj-1", Title: "Test Issue"}
+	msg := IssueDetailLoadedMsg{Detail: detail}
+	if msg.Detail.ID != "proj-1" {
+		t.Error("IssueDetailLoadedMsg should carry the detail")
+	}
+	if msg.Detail.Title != "Test Issue" {
+		t.Error("IssueDetailLoadedMsg should carry the detail title")
+	}
+}
+
+func TestIssueDetailErrMsg_CarriesError(t *testing.T) {
+	err := errors.New("detail fetch failed")
+	msg := IssueDetailErrMsg{Err: err}
+	if msg.Err.Error() != "detail fetch failed" {
+		t.Error("IssueDetailErrMsg should carry the error")
+	}
+}
