@@ -88,6 +88,17 @@ func (a App) fetchIssues() tea.Cmd {
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case IssuesLoadedMsg:
+		a.err = nil
+		if lv, ok := a.views[TabIssues].(*ListView); ok {
+			lv.SetIssues(msg.Issues)
+		}
+		return a, nil
+
+	case ErrMsg:
+		a.err = msg.Err
+		return a, nil
+
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, a.keys.Dashboard):

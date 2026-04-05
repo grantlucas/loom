@@ -339,6 +339,45 @@ func TestApp_ViewSwitchingChangesDelegate(t *testing.T) {
 	}
 }
 
+func TestApp_Update_IssuesLoadedMsg_SetsDataOnListView(t *testing.T) {
+	app := newTestApp()
+	issues := []datasource.Issue{
+		{ID: "a-1", Title: "First"},
+		{ID: "a-2", Title: "Second"},
+	}
+	model, cmd := app.Update(IssuesLoadedMsg{Issues: issues})
+	if cmd != nil {
+		t.Error("expected nil cmd after IssuesLoadedMsg")
+	}
+	a := model.(App)
+	lv := a.views[TabIssues].(*ListView)
+	if len(lv.issues) != 2 {
+		t.Errorf("expected 2 issues in ListView, got %d", len(lv.issues))
+	}
+}
+
+func TestApp_Update_IssuesLoadedMsg_ClearsError(t *testing.T) {
+	app := newTestApp()
+	app.err = errors.New("old error")
+	model, _ := app.Update(IssuesLoadedMsg{Issues: nil})
+	a := model.(App)
+	if a.err != nil {
+		t.Error("expected error to be cleared after successful load")
+	}
+}
+
+func TestApp_Update_ErrMsg_SetsError(t *testing.T) {
+	app := newTestApp()
+	model, cmd := app.Update(ErrMsg{Err: errors.New("fetch failed")})
+	if cmd != nil {
+		t.Error("expected nil cmd after ErrMsg")
+	}
+	a := model.(App)
+	if a.err == nil || a.err.Error() != "fetch failed" {
+		t.Errorf("expected error 'fetch failed', got %v", a.err)
+	}
+}
+
 func TestApp_Init_ReturnsCmd(t *testing.T) {
 	app := newTestApp()
 	cmd := app.Init()
