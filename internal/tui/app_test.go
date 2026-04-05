@@ -1222,13 +1222,13 @@ func TestApp_Update_ReadyLoadedMsg_SetsDataOnDashboardView(t *testing.T) {
 
 func TestApp_Update_NoViewRegistered_ReturnsNil(t *testing.T) {
 	app := newTestApp()
-	app.activeTab = TabTree // no view registered for Tree
+	app.activeTab = Tab(99) // no view registered for this tab
 	model, cmd := app.Update(RefreshMsg{})
 	if cmd != nil {
 		t.Error("expected nil cmd when no view is registered for tab")
 	}
 	a := model.(App)
-	if a.activeTab != TabTree {
+	if a.activeTab != Tab(99) {
 		t.Error("expected tab to remain unchanged")
 	}
 }
@@ -1353,5 +1353,82 @@ func TestApp_EnterOnCriticalPath_NoSelection_IsNoop(t *testing.T) {
 	}
 	if cmd != nil {
 		t.Error("expected nil cmd when no selection")
+	}
+}
+
+func TestNewApp_RegistersTreeView(t *testing.T) {
+	app := newTestApp()
+	v, ok := app.views[TabTree]
+	if !ok {
+		t.Fatal("expected TabTree view to be registered")
+	}
+	if _, ok := v.(*TreeView); !ok {
+		t.Errorf("expected *TreeView, got %T", v)
+	}
+}
+
+func TestApp_Update_IssuesLoadedMsg_SetsDataOnTreeView(t *testing.T) {
+	app := newTestApp()
+	issues := []datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	}
+	model, _ := app.Update(IssuesLoadedMsg{Issues: issues})
+	a := model.(App)
+	tv := a.views[TabTree].(*TreeView)
+	if len(tv.flatNodes) == 0 {
+		t.Error("expected tree nodes to be populated")
+	}
+}
+
+func TestApp_EnterOnTree_NavigatesToDetail(t *testing.T) {
+	detail := &datasource.IssueDetail{ID: "a", Title: "First"}
+	ds := &mockDataSource{detail: detail}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabTree
+	tv := app.views[TabTree].(*TreeView)
+	tv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "First"},
+		{ID: "b", Status: "open", Priority: 1, Title: "Second", Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	})
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabDetail {
+		t.Errorf("expected TabDetail, got %d", a.activeTab)
+	}
+	if cmd == nil {
+		t.Fatal("expected fetch command")
+	}
+}
+
+func TestApp_EnterOnTree_NoSelection_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabTree
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabTree {
+		t.Error("expected to stay on Tree tab when no selection")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd when no selection")
+	}
+}
+
+func TestApp_EnterOnTree_NonTreeView_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabTree
+	app.views[TabTree] = &stubView{}
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabTree {
+		t.Error("expected to stay on Tree tab")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd")
 	}
 }

@@ -1,0 +1,350 @@
+package tui
+
+import (
+	"strings"
+	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/grantlucas/loom/internal/datasource"
+)
+
+// Compile-time check: TreeView must implement View.
+var _ View = (*TreeView)(nil)
+
+func TestNewTreeView_ReturnsNonNil(t *testing.T) {
+	tv := NewTreeView()
+	if tv == nil {
+		t.Fatal("NewTreeView should return a non-nil pointer")
+	}
+}
+
+func TestTreeView_EmptyState(t *testing.T) {
+	tv := NewTreeView()
+	out := tv.View()
+	if !strings.Contains(out, "No data loaded") {
+		t.Error("empty tree view should show 'No data loaded'")
+	}
+}
+
+func TestTreeView_SetIssues_BuildsForest(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	})
+	if len(tv.flatNodes) == 0 {
+		t.Error("expected flat nodes to be populated")
+	}
+}
+
+// --- Forest mode rendering ---
+
+func TestTreeView_ForestMode_RendersRoots(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	out := tv.View()
+	if !strings.Contains(out, "root-1") {
+		t.Error("should contain root issue ID")
+	}
+}
+
+func TestTreeView_ForestMode_RendersChildren(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	out := tv.View()
+	if !strings.Contains(out, "child-1") {
+		t.Error("should contain child issue ID")
+	}
+}
+
+func TestTreeView_ForestMode_RendersTreeChars(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	out := tv.View()
+	// Should contain tree drawing characters
+	if !strings.Contains(out, "├") && !strings.Contains(out, "└") {
+		t.Error("should contain tree drawing characters (├ or └)")
+	}
+}
+
+func TestTreeView_StatusIndicators(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "closed", Priority: 1},
+		{ID: "b", Status: "in_progress", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+		{ID: "c", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "c", DependsOnID: "b"},
+		}},
+	})
+	out := tv.View()
+	if !strings.Contains(out, "✓") {
+		t.Error("should show ✓ for closed issues")
+	}
+	if !strings.Contains(out, "◐") {
+		t.Error("should show ◐ for in_progress issues")
+	}
+	if !strings.Contains(out, "○") {
+		t.Error("should show ○ for open issues")
+	}
+}
+
+func TestTreeView_MultipleRoots(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{
+		{ID: "root-a", Status: "open", Priority: 1},
+		{ID: "root-b", Status: "open", Priority: 2},
+	})
+	out := tv.View()
+	if !strings.Contains(out, "root-a") || !strings.Contains(out, "root-b") {
+		t.Error("should render multiple roots in forest mode")
+	}
+}
+
+// --- Rooted mode ---
+
+func TestTreeView_SetRoot_ShowsSubtree(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.SetRoot("root-1")
+	out := tv.View()
+	if !strings.Contains(out, "root-1") {
+		t.Error("should show root issue in rooted mode")
+	}
+	if !strings.Contains(out, "child-1") {
+		t.Error("should show children of root")
+	}
+}
+
+func TestTreeView_SetRoot_HidesOtherRoots(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{
+		{ID: "root-a", Status: "open", Priority: 1},
+		{ID: "child-a", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "child-a", DependsOnID: "root-a"},
+		}},
+		{ID: "root-b", Status: "open", Priority: 2},
+	})
+	tv.SetRoot("root-a")
+	out := tv.View()
+	if strings.Contains(out, "root-b") {
+		t.Error("should not show other roots in rooted mode")
+	}
+}
+
+func TestTreeView_ClearRoot_ReturnsToForest(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.SetRoot("root-1")
+	tv.ClearRoot()
+	out := tv.View()
+	// Should be back in forest mode showing all roots
+	if tv.rootID != "" {
+		t.Error("rootID should be empty after ClearRoot")
+	}
+	if !strings.Contains(out, "root-1") {
+		t.Error("should show all roots after ClearRoot")
+	}
+}
+
+func TestTreeView_SetRoot_ResetsCursor(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.cursor = 2
+	tv.SetRoot("root-1")
+	if tv.cursor != 0 {
+		t.Error("cursor should reset to 0 after SetRoot")
+	}
+}
+
+// --- Expand/Collapse ---
+
+func TestTreeView_CollapseKey_HidesChildren(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	// Cursor on root-1 (first node), press 'c' to collapse
+	initialCount := len(tv.flatNodes)
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if len(tv.flatNodes) >= initialCount {
+		t.Error("collapsing root should reduce visible nodes")
+	}
+}
+
+func TestTreeView_ExpandKey_ShowsChildren(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	// Collapse first
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	collapsed := len(tv.flatNodes)
+	// Expand
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	if len(tv.flatNodes) <= collapsed {
+		t.Error("expanding should show more nodes")
+	}
+}
+
+func TestTreeView_CollapseLeaf_IsNoop(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	// Move cursor to a leaf node
+	tv.cursor = len(tv.flatNodes) - 1
+	before := len(tv.flatNodes)
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if len(tv.flatNodes) != before {
+		t.Error("collapsing a leaf should be a no-op")
+	}
+}
+
+// --- Cursor navigation ---
+
+func TestTreeView_CursorDown(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if tv.cursor != 1 {
+		t.Errorf("expected cursor 1, got %d", tv.cursor)
+	}
+}
+
+func TestTreeView_CursorUp(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.cursor = 1
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if tv.cursor != 0 {
+		t.Errorf("expected cursor 0, got %d", tv.cursor)
+	}
+}
+
+func TestTreeView_CursorClampBottom(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.cursor = len(tv.flatNodes) - 1
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if tv.cursor != len(tv.flatNodes)-1 {
+		t.Error("cursor should clamp at bottom")
+	}
+}
+
+func TestTreeView_CursorClampTop(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if tv.cursor != 0 {
+		t.Error("cursor should clamp at top")
+	}
+}
+
+// --- SelectedNodeID ---
+
+func TestTreeView_SelectedNodeID(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	id := tv.SelectedNodeID()
+	if id != "root-1" {
+		t.Errorf("expected root-1, got %q", id)
+	}
+}
+
+func TestTreeView_SelectedNodeID_Empty(t *testing.T) {
+	tv := NewTreeView()
+	if tv.SelectedNodeID() != "" {
+		t.Error("expected empty string when no nodes")
+	}
+}
+
+// --- Stats ---
+
+func TestTreeView_RendersStats(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	out := tv.View()
+	if !strings.Contains(out, "nodes") {
+		t.Error("should show node count in stats")
+	}
+	if !strings.Contains(out, "roots") {
+		t.Error("should show root count in stats")
+	}
+}
+
+// --- Update edge cases ---
+
+func TestTreeView_Update_UnhandledKey(t *testing.T) {
+	tv := NewTreeView()
+	cmd := tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
+	if cmd != nil {
+		t.Error("expected nil cmd for unhandled key")
+	}
+}
+
+func TestTreeView_Update_NonKeyMsg(t *testing.T) {
+	tv := NewTreeView()
+	cmd := tv.Update(RefreshMsg{})
+	if cmd != nil {
+		t.Error("expected nil cmd for non-key message")
+	}
+}
+
+// --- Edge cases ---
+
+func TestTreeView_NoTreeNodes(t *testing.T) {
+	tv := NewTreeView()
+	tv.issues = map[string]datasource.Issue{"a": {ID: "a"}}
+	// dag is nil, so flatNodes stays empty
+	out := tv.View()
+	if !strings.Contains(out, "No tree nodes") {
+		t.Error("should show 'No tree nodes' when dag is nil but issues exist")
+	}
+}
+
+func TestTreeView_RenderNode_MissingIssue(t *testing.T) {
+	tv := NewTreeView()
+	// issues has one entry so we pass "No data loaded", but flatNodes references a different ID
+	tv.issues = map[string]datasource.Issue{"other": {ID: "other"}}
+	tv.flatNodes = []flatNode{{id: "missing-1", prefix: "  "}}
+	out := tv.View()
+	if !strings.Contains(out, "missing-1") {
+		t.Error("should render missing node ID")
+	}
+	if !strings.Contains(out, "?") {
+		t.Error("should show ? for missing issue")
+	}
+}
+
+func TestTreeView_LongTitleTruncated(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "This is a very long title that exceeds forty characters and should be truncated"},
+	})
+	out := tv.View()
+	if !strings.Contains(out, "...") {
+		t.Error("long title should be truncated with ...")
+	}
+}
+
+func TestTreeView_CollapsedIndicator(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	// Collapse root-1
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	out := tv.View()
+	if !strings.Contains(out, "+") {
+		t.Error("collapsed node should show + indicator")
+	}
+}
+
+func TestTreeView_RebuildWithNilDAG(t *testing.T) {
+	tv := NewTreeView()
+	tv.dag = nil
+	tv.rebuild()
+	if len(tv.flatNodes) != 0 {
+		t.Error("rebuild with nil dag should produce no nodes")
+	}
+}
+
+// --- Helpers ---
+
+func newTreeViewWithIssues() *TreeView {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{
+		{ID: "root-1", Status: "open", Priority: 1, Title: "Root One"},
+		{ID: "child-1", Status: "open", Priority: 1, Title: "Child One", Dependencies: []datasource.RawDependency{
+			{IssueID: "child-1", DependsOnID: "root-1"},
+		}},
+		{ID: "child-2", Status: "closed", Priority: 2, Title: "Child Two", Dependencies: []datasource.RawDependency{
+			{IssueID: "child-2", DependsOnID: "root-1"},
+		}},
+		{ID: "grandchild-1", Status: "in_progress", Priority: 1, Title: "Grandchild", Dependencies: []datasource.RawDependency{
+			{IssueID: "grandchild-1", DependsOnID: "child-1"},
+		}},
+	})
+	return tv
+}

@@ -67,6 +67,7 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		TabDashboard:    NewDashboardView(),
 		TabIssues:       NewListView(),
 		TabDetail:       NewDetailView(),
+		TabTree:         NewTreeView(),
 		TabCriticalPath: NewCriticalPathView(),
 	}
 	ti := textinput.New()
@@ -134,6 +135,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if dv, ok := a.views[TabDashboard].(*DashboardView); ok {
 			dv.SetIssues(msg.Issues)
+		}
+		if tv, ok := a.views[TabTree].(*TreeView); ok {
+			tv.SetIssues(msg.Issues)
 		}
 		if cpv, ok := a.views[TabCriticalPath].(*CriticalPathView); ok {
 			cpv.SetIssues(msg.Issues)
@@ -221,6 +225,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabIssues:
 			if lv, ok := a.views[TabIssues].(*ListView); ok {
 				id := lv.SelectedIssueID()
+				if id == "" {
+					return a, nil
+				}
+				a.history = nil
+				a.activeTab = TabDetail
+				if dv, ok := a.views[TabDetail].(*DetailView); ok {
+					dv.SetLoading()
+				}
+				return a, a.fetchIssueDetail(id)
+			}
+			return a, nil
+		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabTree:
+			if tv, ok := a.views[TabTree].(*TreeView); ok {
+				id := tv.SelectedNodeID()
 				if id == "" {
 					return a, nil
 				}
