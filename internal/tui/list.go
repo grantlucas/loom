@@ -75,7 +75,12 @@ func NewListView() *ListView {
 func (v *ListView) SetIssues(issues []datasource.Issue) {
 	v.issues = make([]datasource.Issue, len(issues))
 	copy(v.issues, issues)
-	v.sortAndRefresh()
+	if v.filterText != "" {
+		v.applyFilter()
+	} else {
+		v.filtered = nil
+		v.sortAndRefresh()
+	}
 }
 
 func (v *ListView) sortAndRefresh() {

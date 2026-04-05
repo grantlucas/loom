@@ -387,6 +387,7 @@ func (a App) renderHelp() string {
 		{"enter", "Open detail"},
 		{"esc", "Back"},
 		{"g", "goto issue"},
+		{"/", "filter (issues)"},
 		{"r", "Refresh"},
 		{"w", "Toggle watch mode"},
 		{"?", "Toggle help"},

@@ -510,3 +510,29 @@ func TestListView_MixedFieldAndFreetext(t *testing.T) {
 		t.Error("expected a-3 (login but closed) filtered out")
 	}
 }
+
+func TestListView_SetIssuesReappliesActiveFilter(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Login", Status: "open"},
+		{ID: "a-2", Title: "Dashboard", Status: "open"},
+	})
+
+	// Apply a filter
+	enterFilterMode(lv)
+	typeText(lv, "login")
+	lv.Update(enterKey())
+
+	// Simulate data refresh (watch mode)
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Login", Status: "open"},
+		{ID: "a-2", Title: "Dashboard", Status: "open"},
+		{ID: "a-3", Title: "Login v2", Status: "open"},
+	})
+
+	view := lv.View()
+	// Filter should still be active, now matching 2 of 3
+	if !strings.Contains(view, "2 of 3") {
+		t.Errorf("expected '2 of 3' after SetIssues with active filter, got:\n%s", view)
+	}
+}
