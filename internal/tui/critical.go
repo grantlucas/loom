@@ -203,24 +203,13 @@ func (cv *CriticalPathView) renderNode(id string) string {
 	if !ok {
 		return fmt.Sprintf("  %s  %-14s", "?", id)
 	}
-	indicator := critStatusIndicator(issue)
+	indicator := StyledStatusSimple(issue.Status)
 	title := issue.Title
 	maxW := cv.titleMaxWidth()
 	if len(title) > maxW {
 		title = title[:maxW-3] + "..."
 	}
-	return fmt.Sprintf("  %s  %-14s P%d  %s", indicator, issue.ID, issue.Priority, title)
-}
-
-func critStatusIndicator(issue datasource.Issue) string {
-	switch issue.Status {
-	case "closed":
-		return "✓"
-	case "in_progress":
-		return "◐"
-	default:
-		return "○"
-	}
+	return fmt.Sprintf("  %s  %-14s %s  %s", indicator, issue.ID, StyledPriority(issue.Priority), title)
 }
 
 func (cv *CriticalPathView) totalNodes() int {

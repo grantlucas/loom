@@ -193,7 +193,7 @@ func (tv *TreeView) renderLine(node flatNode) string {
 	if !ok {
 		return fmt.Sprintf("%s? %s", node.prefix, node.id)
 	}
-	indicator := treeStatusIndicator(issue)
+	indicator := StyledStatusSimple(issue.Status)
 	collapse := " "
 	if node.hasKids {
 		if tv.collapsed[node.id] {
@@ -207,18 +207,7 @@ func (tv *TreeView) renderLine(node flatNode) string {
 	if len(title) > maxW {
 		title = title[:maxW-3] + "..."
 	}
-	return fmt.Sprintf("%s%s %s %-14s P%d  %s", node.prefix, collapse, indicator, issue.ID, issue.Priority, title)
-}
-
-func treeStatusIndicator(issue datasource.Issue) string {
-	switch issue.Status {
-	case "closed":
-		return "✓"
-	case "in_progress":
-		return "◐"
-	default:
-		return "○"
-	}
+	return fmt.Sprintf("%s%s %s %-14s %s  %s", node.prefix, collapse, indicator, issue.ID, StyledPriority(issue.Priority), title)
 }
 
 // rebuild flattens the tree based on current state (root, collapsed).

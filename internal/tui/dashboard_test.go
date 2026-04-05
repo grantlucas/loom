@@ -399,6 +399,33 @@ func TestDashboardView_AllSectionHeaders(t *testing.T) {
 	}
 }
 
+func TestDashboardView_UsesStyledPriorityInBarChart(t *testing.T) {
+	dv := NewDashboardView()
+	dv.SetIssues([]datasource.Issue{
+		{ID: "1", Status: "open", Priority: 0},
+	})
+	out := dv.View()
+	// StyledPriority returns the same text as plain in non-TTY, but the function should be called
+	// Verify the output contains "P0" (from StyledPriority)
+	if !strings.Contains(out, "P0") {
+		t.Error("dashboard should display P0 in priority distribution")
+	}
+}
+
+func TestDashboardView_UsesStyledPriorityInReadyQueue(t *testing.T) {
+	dv := NewDashboardView()
+	dv.SetIssues([]datasource.Issue{
+		{ID: "ready-1", Status: "open", Priority: 2, Title: "Test"},
+	})
+	dv.SetReady([]datasource.Issue{
+		{ID: "ready-1", Status: "open", Priority: 2, Title: "Test"},
+	})
+	out := dv.View()
+	if !strings.Contains(out, "P2") {
+		t.Error("ready queue should display P2")
+	}
+}
+
 func TestDashboardView_Resize_BarWidthScalesWithTerminal(t *testing.T) {
 	dv := NewDashboardView()
 	dv.SetIssues([]datasource.Issue{

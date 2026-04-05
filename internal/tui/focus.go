@@ -256,11 +256,11 @@ func (fv *FocusView) renderItemLine(rank int, item graph.Impact) string {
 		title = title[:maxW-3] + "..."
 	}
 	if item.UnblockCount == 0 {
-		return fmt.Sprintf("  %d. %-14s [P%d] %s  %s\n     Impact: leaf — unblocks nothing",
-			rank+1, issue.ID, issue.Priority, title, issue.IssueType)
+		return fmt.Sprintf("  %d. %-14s [%s] %s  %s\n     Impact: leaf — unblocks nothing",
+			rank+1, issue.ID, StyledPriority(issue.Priority), title, issue.IssueType)
 	}
-	return fmt.Sprintf("  %d. %-14s [P%d] %s  %s\n     Impact: unblocks %d issues  Σpri: %d  depth: %d",
-		rank+1, issue.ID, issue.Priority, title, issue.IssueType,
+	return fmt.Sprintf("  %d. %-14s [%s] %s  %s\n     Impact: unblocks %d issues  Σpri: %d  depth: %d",
+		rank+1, issue.ID, StyledPriority(issue.Priority), title, issue.IssueType,
 		item.UnblockCount, item.PrioritySum, item.MaxDepth)
 }
 
@@ -278,7 +278,7 @@ func (fv *FocusView) renderDownstreamLine(id string, isLast bool) string {
 	if len(title) > maxW {
 		title = title[:maxW-3] + "..."
 	}
-	return fmt.Sprintf("%s%-14s [P%d] %s", prefix, issue.ID, issue.Priority, title)
+	return fmt.Sprintf("%s%-14s [%s] %s", prefix, issue.ID, StyledPriority(issue.Priority), title)
 }
 
 func (fv *FocusView) totalLines() int {

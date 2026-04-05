@@ -263,7 +263,7 @@ func TestDetailView_View_EmptyDependents(t *testing.T) {
 	}
 }
 
-func TestRelationStatusIndicator(t *testing.T) {
+func TestStyledStatusSimple_UsedInDetailView(t *testing.T) {
 	tests := []struct {
 		status string
 		want   string
@@ -275,9 +275,9 @@ func TestRelationStatusIndicator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.status, func(t *testing.T) {
-			got := relationStatusIndicator(tt.status)
-			if got != tt.want {
-				t.Errorf("relationStatusIndicator(%q) = %q, want %q", tt.status, got, tt.want)
+			got := StyledStatusSimple(tt.status)
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("StyledStatusSimple(%q) = %q, want to contain %q", tt.status, got, tt.want)
 			}
 		})
 	}

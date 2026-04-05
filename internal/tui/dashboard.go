@@ -119,7 +119,7 @@ func (d *DashboardView) renderPriority(b *strings.Builder) {
 			barLen = 1
 		}
 		bar := dashboardBarStyle.Render(strings.Repeat("█", barLen))
-		b.WriteString(fmt.Sprintf("  P%d %s %d\n", p, bar, count))
+		b.WriteString(fmt.Sprintf("  %s %s %d\n", StyledPriority(p), bar, count))
 	}
 	b.WriteString("\n")
 }
@@ -145,7 +145,7 @@ func (d *DashboardView) renderReadyQueue(b *strings.Builder) {
 		limit = len(d.ready)
 	}
 	for _, issue := range d.ready[:limit] {
-		b.WriteString(fmt.Sprintf("  %-14s P%d  %s\n", issue.ID, issue.Priority, issue.Title))
+		b.WriteString(fmt.Sprintf("  %-14s %s  %s\n", issue.ID, StyledPriority(issue.Priority), issue.Title))
 	}
 	b.WriteString("\n")
 }

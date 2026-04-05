@@ -149,9 +149,9 @@ func (v *DetailView) renderContent() string {
 	b.WriteString("\n\n")
 
 	// Metadata
-	b.WriteString(fmt.Sprintf("%s %s   %s P%d   %s %s\n",
+	b.WriteString(fmt.Sprintf("%s %s   %s %s   %s %s\n",
 		detailLabelStyle.Render("Status:"), d.Status,
-		detailLabelStyle.Render("Priority:"), d.Priority,
+		detailLabelStyle.Render("Priority:"), StyledPriority(d.Priority),
 		detailLabelStyle.Render("Type:"), d.IssueType,
 	))
 	b.WriteString(fmt.Sprintf("%s %s   %s %s\n",
@@ -184,7 +184,7 @@ func (v *DetailView) renderContent() string {
 	} else {
 		for _, dep := range d.Dependencies {
 			line := fmt.Sprintf("%s %-14s  %-40s  %s",
-				relationStatusIndicator(dep.Status),
+				StyledStatusSimple(dep.Status),
 				dep.ID,
 				dep.Title,
 				dep.Status,
@@ -208,7 +208,7 @@ func (v *DetailView) renderContent() string {
 	} else {
 		for _, dep := range d.Dependents {
 			line := fmt.Sprintf("%s %-14s  %-40s  %s",
-				relationStatusIndicator(dep.Status),
+				StyledStatusSimple(dep.Status),
 				dep.ID,
 				dep.Title,
 				dep.Status,
@@ -226,14 +226,3 @@ func (v *DetailView) renderContent() string {
 	return b.String()
 }
 
-// relationStatusIndicator returns a status indicator character for an expanded relation.
-func relationStatusIndicator(status string) string {
-	switch status {
-	case "closed":
-		return "✓"
-	case "in_progress":
-		return "◐"
-	default:
-		return "○"
-	}
-}
