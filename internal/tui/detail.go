@@ -79,7 +79,15 @@ var (
 )
 
 // Resize adapts the detail layout to the given terminal dimensions.
-func (v *DetailView) Resize(width, height int) {}
+func (v *DetailView) Resize(width, height int) {
+	// Subtract overhead for tab bar (2 lines) and breadcrumb (1 line)
+	contentHeight := height - 3
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+	v.viewport.Width = width
+	v.viewport.Height = contentHeight
+}
 
 // Update handles input messages, delegating to the viewport for scrolling.
 func (v *DetailView) Update(msg tea.Msg) tea.Cmd {

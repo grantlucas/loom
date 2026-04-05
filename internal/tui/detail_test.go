@@ -499,3 +499,18 @@ var errTest = errForTest("test error")
 type errForTest string
 
 func (e errForTest) Error() string { return string(e) }
+
+func TestDetailView_Resize_SetsViewportDimensions(t *testing.T) {
+	dv := NewDetailView()
+	dv.Resize(100, 40)
+	if dv.viewport.Width != 100 {
+		t.Errorf("expected viewport width 100, got %d", dv.viewport.Width)
+	}
+	// Height should account for tab bar and breadcrumb (subtract overhead)
+	if dv.viewport.Height <= 0 {
+		t.Error("expected viewport height > 0 after Resize")
+	}
+	if dv.viewport.Height >= 40 {
+		t.Error("expected viewport height < terminal height (overhead subtracted)")
+	}
+}
