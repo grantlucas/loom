@@ -55,6 +55,7 @@ type App struct {
 	ds        datasource.DataSource
 	interval  time.Duration
 	err       error
+	history   []string
 }
 
 // NewApp creates a new App wired to the given DataSource.
@@ -159,6 +160,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if id == "" {
 					return a, nil
 				}
+				a.history = nil
 				a.activeTab = TabDetail
 				if dv, ok := a.views[TabDetail].(*DetailView); ok {
 					dv.SetLoading()
@@ -166,7 +168,28 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return a, a.fetchIssueDetail(id)
 			}
 			return a, nil
+		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabDetail:
+			if dv, ok := a.views[TabDetail].(*DetailView); ok {
+				targetID := dv.SelectedRelationID()
+				if targetID == "" {
+					return a, nil
+				}
+				if dv.detail != nil {
+					a.history = append(a.history, dv.detail.ID)
+				}
+				dv.SetLoading()
+				return a, a.fetchIssueDetail(targetID)
+			}
+			return a, nil
 		case key.Matches(msg, a.keys.Back) && a.activeTab == TabDetail:
+			if len(a.history) > 0 {
+				prevID := a.history[len(a.history)-1]
+				a.history = a.history[:len(a.history)-1]
+				if dv, ok := a.views[TabDetail].(*DetailView); ok {
+					dv.SetLoading()
+				}
+				return a, a.fetchIssueDetail(prevID)
+			}
 			a.activeTab = TabIssues
 			return a, nil
 		case key.Matches(msg, a.keys.Refresh):
@@ -203,10 +226,25 @@ func (a App) View() string {
 	if a.showHelp {
 		b.WriteString(a.renderHelp())
 		b.WriteString("\n")
-	} else if v, ok := a.views[a.activeTab]; ok {
-		b.WriteString(v.View())
+	} else {
+		if a.activeTab == TabDetail {
+			b.WriteString(a.renderBreadcrumb())
+			b.WriteString("\n")
+		}
+		if v, ok := a.views[a.activeTab]; ok {
+			b.WriteString(v.View())
+		}
 	}
 	return b.String()
+}
+
+func (a App) renderBreadcrumb() string {
+	parts := []string{"Issues"}
+	parts = append(parts, a.history...)
+	if dv, ok := a.views[TabDetail].(*DetailView); ok && dv.detail != nil {
+		parts = append(parts, dv.detail.ID)
+	}
+	return breadcrumbStyle.Render(strings.Join(parts, " > "))
 }
 
 func (a App) renderHelp() string {

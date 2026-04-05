@@ -755,6 +755,252 @@ func TestApp_EnterOnIssues_NonListView_IsNoop(t *testing.T) {
 	}
 }
 
+func TestNewApp_EmptyHistory(t *testing.T) {
+	app := newTestApp()
+	if len(app.history) != 0 {
+		t.Error("expected empty history on new app")
+	}
+}
+
+func TestApp_EnterOnIssues_ClearsHistory(t *testing.T) {
+	ds := &mockDataSource{
+		issues: []datasource.Issue{{ID: "x-1", Title: "Test"}},
+		detail: &datasource.IssueDetail{ID: "x-1", Title: "Test"},
+	}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabIssues
+	app.history = []string{"old-1", "old-2"}
+	lv := app.views[TabIssues].(*ListView)
+	lv.SetIssues(ds.issues)
+
+	model, _ := app.Update(enterKeyMsg())
+	a := model.(App)
+	if len(a.history) != 0 {
+		t.Errorf("expected history cleared, got %v", a.history)
+	}
+}
+
+func TestApp_EnterOnDetail_PushesCurrentAndFetches(t *testing.T) {
+	detail := &datasource.IssueDetail{
+		ID:    "d-1",
+		Title: "Current",
+		Dependencies: []datasource.ExpandedRelation{
+			{ID: "d-2", Title: "Dep", Status: "open"},
+		},
+	}
+	ds := &mockDataSource{
+		detail: &datasource.IssueDetail{ID: "d-2", Title: "Dep"},
+	}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabDetail
+	dv := app.views[TabDetail].(*DetailView)
+	dv.SetDetail(detail)
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if len(a.history) != 1 || a.history[0] != "d-1" {
+		t.Errorf("expected history [d-1], got %v", a.history)
+	}
+	if cmd == nil {
+		t.Fatal("expected fetch command")
+	}
+	msg := cmd()
+	if loaded, ok := msg.(IssueDetailLoadedMsg); !ok || loaded.Detail.ID != "d-2" {
+		t.Error("expected fetch for d-2")
+	}
+}
+
+func TestApp_EnterOnDetail_NoRelation_IsNoop(t *testing.T) {
+	detail := &datasource.IssueDetail{ID: "d-1", Title: "No rels"}
+	app := newTestApp()
+	app.activeTab = TabDetail
+	dv := app.views[TabDetail].(*DetailView)
+	dv.SetDetail(detail)
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if len(a.history) != 0 {
+		t.Error("expected history unchanged")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd")
+	}
+}
+
+func TestApp_EnterOnDetail_SetsLoading(t *testing.T) {
+	detail := &datasource.IssueDetail{
+		ID:           "d-1",
+		Dependencies: []datasource.ExpandedRelation{{ID: "d-2", Status: "open"}},
+	}
+	ds := &mockDataSource{detail: &datasource.IssueDetail{ID: "d-2"}}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabDetail
+	dv := app.views[TabDetail].(*DetailView)
+	dv.SetDetail(detail)
+
+	model, _ := app.Update(enterKeyMsg())
+	a := model.(App)
+	dvAfter := a.views[TabDetail].(*DetailView)
+	if !dvAfter.loading {
+		t.Error("expected loading state after Enter on detail relation")
+	}
+}
+
+func TestApp_EnterOnDetail_NonDetailView_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabDetail
+	app.views[TabDetail] = &stubView{}
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabDetail {
+		t.Error("expected to stay on detail tab")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd")
+	}
+}
+
+func TestApp_EscOnDetail_WithHistory_PopsAndFetches(t *testing.T) {
+	ds := &mockDataSource{
+		detail: &datasource.IssueDetail{ID: "prev-1", Title: "Previous"},
+	}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabDetail
+	app.history = []string{"prev-1"}
+
+	model, cmd := app.Update(escKeyMsg())
+	a := model.(App)
+	if len(a.history) != 0 {
+		t.Errorf("expected history popped to empty, got %v", a.history)
+	}
+	if a.activeTab != TabDetail {
+		t.Error("expected to stay on detail tab while fetching previous")
+	}
+	if cmd == nil {
+		t.Fatal("expected fetch command")
+	}
+	msg := cmd()
+	if loaded, ok := msg.(IssueDetailLoadedMsg); !ok || loaded.Detail.ID != "prev-1" {
+		t.Error("expected fetch for prev-1")
+	}
+}
+
+func TestApp_EscOnDetail_WithHistory_SetsLoading(t *testing.T) {
+	ds := &mockDataSource{detail: &datasource.IssueDetail{ID: "prev-1"}}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabDetail
+	app.history = []string{"prev-1"}
+
+	model, _ := app.Update(escKeyMsg())
+	a := model.(App)
+	dv := a.views[TabDetail].(*DetailView)
+	if !dv.loading {
+		t.Error("expected loading state on back navigation")
+	}
+}
+
+func TestApp_MultiStepNavigation(t *testing.T) {
+	// Simulate: list -> A -> B -> C, then esc back through history to list
+	ds := &mockDataSource{
+		issues: []datasource.Issue{{ID: "a-1", Title: "A"}},
+	}
+	app := newTestAppWithDS(ds)
+	dv := app.views[TabDetail].(*DetailView)
+
+	// list -> A (via issues list)
+	app.activeTab = TabIssues
+	lv := app.views[TabIssues].(*ListView)
+	lv.SetIssues(ds.issues)
+	ds.detail = &datasource.IssueDetail{ID: "a-1"}
+	model, _ := app.Update(enterKeyMsg())
+	app = model.(App)
+	// Simulate detail loaded
+	dv.SetDetail(&datasource.IssueDetail{
+		ID:           "a-1",
+		Dependencies: []datasource.ExpandedRelation{{ID: "b-1", Status: "open"}},
+	})
+
+	// A -> B (via relation Enter)
+	ds.detail = &datasource.IssueDetail{ID: "b-1"}
+	model, _ = app.Update(enterKeyMsg())
+	app = model.(App)
+	dv.SetDetail(&datasource.IssueDetail{
+		ID:           "b-1",
+		Dependencies: []datasource.ExpandedRelation{{ID: "c-1", Status: "open"}},
+	})
+
+	// B -> C
+	ds.detail = &datasource.IssueDetail{ID: "c-1"}
+	model, _ = app.Update(enterKeyMsg())
+	app = model.(App)
+
+	if len(app.history) != 2 {
+		t.Fatalf("expected history [a-1, b-1], got %v", app.history)
+	}
+
+	// esc -> B (pop c-1's parent b-1)
+	model, _ = app.Update(escKeyMsg())
+	app = model.(App)
+	if len(app.history) != 1 || app.history[0] != "a-1" {
+		t.Errorf("expected history [a-1], got %v", app.history)
+	}
+
+	// esc -> A (pop b-1's parent a-1)
+	model, _ = app.Update(escKeyMsg())
+	app = model.(App)
+	if len(app.history) != 0 {
+		t.Errorf("expected empty history, got %v", app.history)
+	}
+
+	// esc -> list (history empty, go to Issues)
+	model, _ = app.Update(escKeyMsg())
+	app = model.(App)
+	if app.activeTab != TabIssues {
+		t.Error("expected to return to Issues tab after exhausting history")
+	}
+}
+
+func TestApp_RenderBreadcrumb_OnDetailWithHistory(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabDetail
+	app.history = []string{"a-1", "b-1"}
+	dv := app.views[TabDetail].(*DetailView)
+	dv.SetDetail(&datasource.IssueDetail{ID: "c-1", Title: "Current"})
+
+	view := app.View()
+	if !strings.Contains(view, "a-1") || !strings.Contains(view, "b-1") {
+		t.Error("expected breadcrumb to contain history IDs")
+	}
+	if !strings.Contains(view, "c-1") {
+		t.Error("expected breadcrumb to contain current issue ID")
+	}
+}
+
+func TestApp_RenderBreadcrumb_NotShownOnIssuesTab(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabIssues
+	app.history = []string{"should-not-show"}
+
+	view := app.View()
+	if strings.Contains(view, "should-not-show") {
+		t.Error("breadcrumb should not appear on Issues tab")
+	}
+}
+
+func TestApp_RenderBreadcrumb_EmptyOnDetailNoHistory(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabDetail
+	dv := app.views[TabDetail].(*DetailView)
+	dv.SetDetail(&datasource.IssueDetail{ID: "solo-1", Title: "Solo"})
+
+	view := app.View()
+	// With no history, breadcrumb should show just "Issues > solo-1"
+	if !strings.Contains(view, "Issues") {
+		t.Error("expected breadcrumb to show 'Issues' as root")
+	}
+}
+
 func TestApp_HelpOverlay_ShowsEnterAndEsc(t *testing.T) {
 	app := newTestApp()
 	app.showHelp = true
