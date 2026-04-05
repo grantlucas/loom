@@ -2,9 +2,12 @@ package tui
 
 import (
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/grantlucas/loom/internal/datasource"
 )
 
 // Tab represents a navigable view tab.
@@ -49,14 +52,20 @@ type App struct {
 	watchMode bool
 	views     map[Tab]View
 	keys      KeyMap
+	ds        datasource.DataSource
+	interval  time.Duration
+	err       error
 }
 
-// NewApp creates a new App with default settings.
-func NewApp() App {
+// NewApp creates a new App wired to the given DataSource.
+func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 	return App{
 		activeTab: TabDashboard,
 		views:     make(map[Tab]View),
 		keys:      DefaultKeyMap(),
+		ds:        ds,
+		interval:  interval,
+		watchMode: watch,
 	}
 }
 

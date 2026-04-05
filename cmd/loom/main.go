@@ -39,9 +39,8 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 	exec := &datasource.BdExecutor{WorkDir: cfg.BeadsDir}
 	client := datasource.NewClient(exec)
 	cache := datasource.NewCache(client, cfg.Interval)
-	_ = cache // wired to views in a future issue
 
-	app := tui.NewApp()
+	app := tui.NewApp(cache, cfg.Interval, cfg.Watch)
 	p := tea.NewProgram(app, tea.WithOutput(stderr))
 	_, err = p.Run()
 	return err

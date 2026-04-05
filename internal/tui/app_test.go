@@ -3,19 +3,77 @@ package tui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/grantlucas/loom/internal/datasource"
 )
 
+// mockDataSource implements datasource.DataSource and tracks calls.
+type mockDataSource struct {
+	issues      []datasource.Issue
+	err         error
+	callCount   int
+	invalidated bool
+}
+
+func (m *mockDataSource) ListIssues() ([]datasource.Issue, error) {
+	m.callCount++
+	return m.issues, m.err
+}
+
+func (m *mockDataSource) GetIssue(string) (*datasource.IssueDetail, error) {
+	return nil, nil
+}
+
+func (m *mockDataSource) ListReady() ([]datasource.Issue, error) {
+	return nil, nil
+}
+
+func (m *mockDataSource) Invalidate() {
+	m.invalidated = true
+}
+
+func newTestApp() App {
+	return NewApp(&mockDataSource{}, 5*time.Second, false)
+}
+
+func newTestAppWithDS(ds datasource.DataSource) App {
+	return NewApp(ds, 5*time.Second, false)
+}
+
 func TestNewApp_DefaultsToDashboard(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	if app.activeTab != TabDashboard {
 		t.Errorf("expected active tab %d (Dashboard), got %d", TabDashboard, app.activeTab)
 	}
 }
 
+func TestNewApp_StoresDataSource(t *testing.T) {
+	ds := &mockDataSource{}
+	app := NewApp(ds, 5*time.Second, false)
+	if app.ds != ds {
+		t.Error("expected NewApp to store the provided DataSource")
+	}
+}
+
+func TestNewApp_StoresInterval(t *testing.T) {
+	app := NewApp(&mockDataSource{}, 10*time.Second, false)
+	if app.interval != 10*time.Second {
+		t.Errorf("expected interval 10s, got %v", app.interval)
+	}
+}
+
+func TestNewApp_SetsWatchMode(t *testing.T) {
+	app := NewApp(&mockDataSource{}, 5*time.Second, true)
+	if !app.watchMode {
+		t.Error("expected watch mode to be set when passed true")
+	}
+}
+
 func TestNewApp_ImplementsTeaModel(t *testing.T) {
-	var _ tea.Model = NewApp()
+	var _ tea.Model = newTestApp()
 }
 
 func keyMsg(r rune) tea.Msg {
@@ -35,7 +93,7 @@ func TestApp_TabSwitching(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(string(tt.key), func(t *testing.T) {
-			app := NewApp()
+			app := newTestApp()
 			// Start on a different tab to confirm switching works
 			app.activeTab = TabCriticalPath
 			if tt.key == 'c' {
@@ -52,7 +110,7 @@ func TestApp_TabSwitching(t *testing.T) {
 }
 
 func TestApp_QuitKey(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	_, cmd := app.Update(keyMsg('q'))
 	if cmd == nil {
 		t.Fatal("expected quit command, got nil")
@@ -65,7 +123,7 @@ func TestApp_QuitKey(t *testing.T) {
 }
 
 func TestApp_ViewRendersTabBar(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	view := app.View()
 
 	// All tab labels should appear in the output
@@ -79,7 +137,7 @@ func TestApp_ViewRendersTabBar(t *testing.T) {
 
 func TestApp_ViewHighlightsActiveTab(t *testing.T) {
 	// When on Issues tab, the tab bar should render differently for the active tab
-	app := NewApp()
+	app := newTestApp()
 	app.activeTab = TabIssues
 	view := app.View()
 
@@ -110,7 +168,7 @@ func TestApp_TabNames(t *testing.T) {
 }
 
 func TestApp_HelpToggle(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	if app.showHelp {
 		t.Fatal("help should be hidden by default")
 	}
@@ -131,7 +189,7 @@ func TestApp_HelpToggle(t *testing.T) {
 }
 
 func TestApp_HelpOverlayInView(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	app.showHelp = true
 	view := app.View()
 
@@ -144,7 +202,7 @@ func TestApp_HelpOverlayInView(t *testing.T) {
 }
 
 func TestApp_RefreshKey(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	_, cmd := app.Update(keyMsg('r'))
 	if cmd == nil {
 		t.Fatal("expected refresh command from r key, got nil")
@@ -156,7 +214,7 @@ func TestApp_RefreshKey(t *testing.T) {
 }
 
 func TestApp_WatchToggle(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	if app.watchMode {
 		t.Fatal("watch mode should be off by default")
 	}
@@ -192,7 +250,7 @@ func (v *stubView) View() string {
 }
 
 func TestApp_ViewDelegatesToActiveView(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	stub := &stubView{content: "dashboard content here"}
 	app.views[TabDashboard] = stub
 
@@ -203,7 +261,7 @@ func TestApp_ViewDelegatesToActiveView(t *testing.T) {
 }
 
 func TestApp_UpdateDelegatesToActiveView(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	stub := &stubView{}
 	app.views[TabDashboard] = stub
 
@@ -216,7 +274,7 @@ func TestApp_UpdateDelegatesToActiveView(t *testing.T) {
 }
 
 func TestApp_ViewSwitchingChangesDelegate(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	dashStub := &stubView{content: "dash"}
 	issueStub := &stubView{content: "issues"}
 	app.views[TabDashboard] = dashStub
@@ -236,7 +294,7 @@ func TestApp_ViewSwitchingChangesDelegate(t *testing.T) {
 }
 
 func TestApp_Init_ReturnsNil(t *testing.T) {
-	app := NewApp()
+	app := newTestApp()
 	cmd := app.Init()
 	if cmd != nil {
 		t.Error("Init() should return nil")
@@ -252,7 +310,7 @@ func TestTab_String_OutOfRange(t *testing.T) {
 
 func TestApp_Update_NonKeyMsg_NoView(t *testing.T) {
 	// Non-key messages with no registered view should pass through
-	app := NewApp()
+	app := newTestApp()
 	model, cmd := app.Update(RefreshMsg{})
 	if cmd != nil {
 		t.Error("expected nil cmd for non-key message with no view")
@@ -265,7 +323,7 @@ func TestApp_Update_NonKeyMsg_NoView(t *testing.T) {
 
 func TestApp_Update_NonKeyMsg_WithView(t *testing.T) {
 	// Non-key messages should be delegated to the active view
-	app := NewApp()
+	app := newTestApp()
 	stub := &stubView{}
 	app.views[TabDashboard] = stub
 
@@ -277,7 +335,7 @@ func TestApp_Update_NonKeyMsg_WithView(t *testing.T) {
 
 func TestApp_Update_UnhandledKey_NoView(t *testing.T) {
 	// Unhandled key with no view registered should return nil cmd
-	app := NewApp()
+	app := newTestApp()
 	_, cmd := app.Update(keyMsg('x'))
 	if cmd != nil {
 		t.Error("expected nil cmd for unhandled key with no view")
@@ -286,7 +344,7 @@ func TestApp_Update_UnhandledKey_NoView(t *testing.T) {
 
 func TestApp_Update_UnhandledKey_WithView(t *testing.T) {
 	// Unhandled keys should be forwarded to the active view
-	app := NewApp()
+	app := newTestApp()
 	stub := &stubView{}
 	app.views[TabDashboard] = stub
 
