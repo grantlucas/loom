@@ -76,6 +76,14 @@ func (a App) Init() tea.Cmd {
 	return a.fetchIssues()
 }
 
+func tickMsg(t time.Time) tea.Msg {
+	return TickMsg(t)
+}
+
+func (a App) scheduleTick() tea.Cmd {
+	return tea.Tick(a.interval, tickMsg)
+}
+
 func (a App) fetchIssues() tea.Cmd {
 	return func() tea.Msg {
 		issues, err := a.ds.ListIssues()
@@ -103,9 +111,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.watchMode {
 			return a, tea.Batch(
 				a.fetchIssues(),
-				tea.Tick(a.interval, func(t time.Time) tea.Msg {
-					return TickMsg(t)
-				}),
+				a.scheduleTick(),
 			)
 		}
 		return a, nil
@@ -132,9 +138,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Watch):
 			a.watchMode = !a.watchMode
 			if a.watchMode {
-				return a, tea.Tick(a.interval, func(t time.Time) tea.Msg {
-					return TickMsg(t)
-				})
+				return a, a.scheduleTick()
 			}
 			return a, nil
 		case key.Matches(msg, a.keys.Help):

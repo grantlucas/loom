@@ -471,6 +471,18 @@ func TestApp_Update_TickMsg_WatchOff_Noop(t *testing.T) {
 	}
 }
 
+func TestTickMsg_ConvertsTimeToTickMsg(t *testing.T) {
+	now := time.Now()
+	msg := tickMsg(now)
+	tick, ok := msg.(TickMsg)
+	if !ok {
+		t.Fatalf("expected TickMsg, got %T", msg)
+	}
+	if time.Time(tick) != now {
+		t.Error("expected tick time to match input")
+	}
+}
+
 func TestApp_Init_ReturnsCmd(t *testing.T) {
 	app := newTestApp()
 	cmd := app.Init()
