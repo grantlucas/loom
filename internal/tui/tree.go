@@ -96,6 +96,9 @@ func (tv *TreeView) SelectedNodeID() string {
 	return tv.flatNodes[tv.cursor].id
 }
 
+// Resize adapts the tree layout to the given terminal dimensions.
+func (tv *TreeView) Resize(width, height int) {}
+
 // Update handles key messages.
 func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)

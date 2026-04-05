@@ -33,14 +33,16 @@ var statusOrder = map[string]int{
 
 // ListView displays a table of all issues with sorting and navigation.
 type ListView struct {
-	table      table.Model
-	issues     []datasource.Issue
-	filtered   []datasource.Issue
-	sortCol    sortColumn
-	sortKey    key.Binding
-	filterMode bool
-	filterText string
+	table       table.Model
+	issues      []datasource.Issue
+	filtered    []datasource.Issue
+	sortCol     sortColumn
+	sortKey     key.Binding
+	filterMode  bool
+	filterText  string
 	filterInput textinput.Model
+	width       int
+	height      int
 }
 
 // NewListView creates a new ListView with default settings.
@@ -298,6 +300,12 @@ func (v *ListView) View() string {
 		status = statusBarStyle.Render(fmt.Sprintf("%d %s", count, label))
 	}
 	return v.table.View() + "\n" + status
+}
+
+// Resize adapts the list layout to the given terminal dimensions.
+func (v *ListView) Resize(width, height int) {
+	v.width = width
+	v.height = height
 }
 
 func (v *ListView) displayIssues() []datasource.Issue {

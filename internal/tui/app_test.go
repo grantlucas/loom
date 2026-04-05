@@ -343,6 +343,8 @@ func (v *stubView) View() string {
 	return v.content
 }
 
+func (v *stubView) Resize(width, height int) {}
+
 func TestApp_ViewDelegatesToActiveView(t *testing.T) {
 	app := newTestApp()
 	stub := &stubView{content: "dashboard content here"}
@@ -1630,5 +1632,29 @@ func TestApp_View_WatchIndicator_HiddenWhenInactive(t *testing.T) {
 	output := app.View()
 	if strings.Contains(output, "WATCH") {
 		t.Error("expected View() NOT to contain watch indicator when watch mode is inactive")
+	}
+}
+
+func TestApp_WindowSizeMsg_StoresDimensions(t *testing.T) {
+	app := newTestApp()
+	msg := tea.WindowSizeMsg{Width: 120, Height: 40}
+	model, _ := app.Update(msg)
+	a := model.(App)
+	if a.width != 120 || a.height != 40 {
+		t.Errorf("expected width=120 height=40, got width=%d height=%d", a.width, a.height)
+	}
+}
+
+func TestApp_WindowSizeMsg_PropagatesResizeToActiveView(t *testing.T) {
+	app := newTestApp()
+	// Switch to issues tab first
+	app.activeTab = TabIssues
+	msg := tea.WindowSizeMsg{Width: 100, Height: 30}
+	app.Update(msg)
+
+	// Verify ListView got resized by checking it has a non-zero width stored
+	lv := app.views[TabIssues].(*ListView)
+	if lv.width == 0 {
+		t.Error("expected ListView to have non-zero width after WindowSizeMsg")
 	}
 }

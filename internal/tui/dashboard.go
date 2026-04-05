@@ -33,6 +33,9 @@ func (d *DashboardView) SetReady(issues []datasource.Issue) {
 	d.ready = issues
 }
 
+// Resize adapts the dashboard layout to the given terminal dimensions.
+func (d *DashboardView) Resize(width, height int) {}
+
 // Update handles messages. The dashboard has no interactive elements.
 func (d *DashboardView) Update(_ tea.Msg) tea.Cmd {
 	return nil

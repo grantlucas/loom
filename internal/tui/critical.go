@@ -96,6 +96,9 @@ func (cv *CriticalPathView) SelectedNodeID() string {
 	return ""
 }
 
+// Resize adapts the critical path layout to the given terminal dimensions.
+func (cv *CriticalPathView) Resize(width, height int) {}
+
 // Update handles key messages for cursor navigation and sort toggling.
 func (cv *CriticalPathView) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)

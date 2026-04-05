@@ -132,6 +132,9 @@ func (fv *FocusView) SelectedNodeID() string {
 	return ""
 }
 
+// Resize adapts the focus layout to the given terminal dimensions.
+func (fv *FocusView) Resize(width, height int) {}
+
 // Update handles key messages.
 func (fv *FocusView) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)

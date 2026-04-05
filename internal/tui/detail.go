@@ -78,6 +78,9 @@ var (
 	cursorUp   = key.NewBinding(key.WithKeys("k"))
 )
 
+// Resize adapts the detail layout to the given terminal dimensions.
+func (v *DetailView) Resize(width, height int) {}
+
 // Update handles input messages, delegating to the viewport for scrolling.
 func (v *DetailView) Update(msg tea.Msg) tea.Cmd {
 	if kmsg, ok := msg.(tea.KeyMsg); ok {

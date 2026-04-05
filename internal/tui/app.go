@@ -46,6 +46,7 @@ func (t Tab) String() string {
 type View interface {
 	Update(msg tea.Msg) tea.Cmd
 	View() string
+	Resize(width, height int)
 }
 
 // App is the root Bubble Tea model for Loom.
@@ -61,6 +62,8 @@ type App struct {
 	history   []string
 	gotoMode  bool
 	gotoInput textinput.Model
+	width     int
+	height    int
 }
 
 // NewApp creates a new App wired to the given DataSource.
@@ -186,6 +189,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.fetchReady(),
 				a.scheduleTick(),
 			)
+		}
+		return a, nil
+
+	case tea.WindowSizeMsg:
+		a.width = msg.Width
+		a.height = msg.Height
+		for _, v := range a.views {
+			v.Resize(msg.Width, msg.Height)
 		}
 		return a, nil
 
