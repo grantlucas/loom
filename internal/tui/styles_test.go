@@ -33,3 +33,21 @@ func TestInactiveTabStyle_HasPadding(t *testing.T) {
 		t.Error("inactive tab style should have horizontal padding")
 	}
 }
+
+func TestDetailTitleStyle_IsBold(t *testing.T) {
+	if !detailTitleStyle.GetBold() {
+		t.Error("detail title style should be bold")
+	}
+}
+
+func TestDetailSectionStyle_IsBold(t *testing.T) {
+	if !detailSectionStyle.GetBold() {
+		t.Error("detail section style should be bold")
+	}
+}
+
+func TestDetailLabelStyle_IsDimmed(t *testing.T) {
+	if !detailLabelStyle.GetFaint() {
+		t.Error("detail label style should be faint/dimmed")
+	}
+}

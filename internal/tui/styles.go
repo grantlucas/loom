@@ -21,4 +21,16 @@ var (
 	// Status bar at bottom
 	statusBarStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("243"))
+
+	// Detail view styles
+	detailTitleStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("205"))
+
+	detailSectionStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("243"))
+
+	detailLabelStyle = lipgloss.NewStyle().
+				Faint(true)
 )
