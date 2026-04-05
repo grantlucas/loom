@@ -3,6 +3,7 @@ package datasource
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -441,6 +442,15 @@ func TestBdExecutorExitError_ReturnsBdError(t *testing.T) {
 	}
 	if bdErr.Stderr != "some other error" {
 		t.Errorf("Stderr = %q, want %q", bdErr.Stderr, "some other error")
+	}
+	// Verify Error() includes args and stderr
+	errStr := bdErr.Error()
+	if !strings.Contains(errStr, "some other error") {
+		t.Errorf("Error() = %q, expected to contain stderr", errStr)
+	}
+	// Verify Unwrap() returns the underlying error
+	if bdErr.Unwrap() == nil {
+		t.Error("Unwrap() returned nil, expected underlying error")
 	}
 }
 
