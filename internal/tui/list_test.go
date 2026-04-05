@@ -347,3 +347,166 @@ func TestListView_FreetextFilterMatchesTitleAndID(t *testing.T) {
 		t.Error("expected loom-2 (Add dashboard) to be filtered out")
 	}
 }
+
+func TestListView_FilteredStatusBarSingular(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Unique thing"},
+		{ID: "a-2", Title: "Something else"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "unique")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "1 of 2 issue") {
+		t.Errorf("expected '1 of 2 issue' (singular), got:\n%s", view)
+	}
+	// Must not say "issues" (plural)
+	if strings.Contains(view, "1 of 2 issues") {
+		t.Error("expected singular 'issue' not 'issues' for 1 result")
+	}
+}
+
+func TestListView_FilterByStatus(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Open task", Status: "open"},
+		{ID: "a-2", Title: "Active task", Status: "in_progress"},
+		{ID: "a-3", Title: "Done task", Status: "closed"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "status:open")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "1 of 3") {
+		t.Errorf("expected '1 of 3' for status:open filter, got:\n%s", view)
+	}
+	if !strings.Contains(view, "a-1") {
+		t.Error("expected a-1 (open) in filtered results")
+	}
+	if strings.Contains(view, "a-2") {
+		t.Error("expected a-2 (in_progress) filtered out")
+	}
+}
+
+func TestListView_FilterByPriority(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Critical", Priority: 0},
+		{ID: "a-2", Title: "Medium", Priority: 2},
+		{ID: "a-3", Title: "Low", Priority: 4},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "priority:2")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "1 of 3") {
+		t.Errorf("expected '1 of 3' for priority:2 filter, got:\n%s", view)
+	}
+	if !strings.Contains(view, "a-2") {
+		t.Error("expected a-2 (priority 2) in results")
+	}
+}
+
+func TestListView_FilterByType(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Bug report", IssueType: "bug"},
+		{ID: "a-2", Title: "New feature", IssueType: "feature"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "type:bug")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "1 of 2") {
+		t.Errorf("expected '1 of 2' for type:bug filter, got:\n%s", view)
+	}
+	if !strings.Contains(view, "a-1") {
+		t.Error("expected a-1 (bug) in results")
+	}
+}
+
+func TestListView_FilterByAssignee(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Alice task", Assignee: "alice"},
+		{ID: "a-2", Title: "Bob task", Assignee: "bob"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "assignee:alice")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "1 of 2") {
+		t.Errorf("expected '1 of 2' for assignee:alice filter, got:\n%s", view)
+	}
+	if !strings.Contains(view, "a-1") {
+		t.Error("expected a-1 (alice) in results")
+	}
+	if strings.Contains(view, "a-2") {
+		t.Error("expected a-2 (bob) filtered out")
+	}
+}
+
+func TestListView_ComposableFilters(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Open bug", Status: "open", Priority: 1},
+		{ID: "a-2", Title: "Open feature", Status: "open", Priority: 2},
+		{ID: "a-3", Title: "Closed bug", Status: "closed", Priority: 1},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "status:open priority:1")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "1 of 3") {
+		t.Errorf("expected '1 of 3' for composable filter, got:\n%s", view)
+	}
+	if !strings.Contains(view, "a-1") {
+		t.Error("expected a-1 (open + P1) in results")
+	}
+	if strings.Contains(view, "a-2") {
+		t.Error("expected a-2 (open but P2) filtered out")
+	}
+	if strings.Contains(view, "a-3") {
+		t.Error("expected a-3 (P1 but closed) filtered out")
+	}
+}
+
+func TestListView_MixedFieldAndFreetext(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Fix login bug", Status: "open"},
+		{ID: "a-2", Title: "Fix logout bug", Status: "open"},
+		{ID: "a-3", Title: "Fix login style", Status: "closed"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "status:open login")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "1 of 3") {
+		t.Errorf("expected '1 of 3' for mixed filter, got:\n%s", view)
+	}
+	if !strings.Contains(view, "a-1") {
+		t.Error("expected a-1 (open + login) in results")
+	}
+	if strings.Contains(view, "a-2") {
+		t.Error("expected a-2 (open but no 'login') filtered out")
+	}
+	if strings.Contains(view, "a-3") {
+		t.Error("expected a-3 (login but closed) filtered out")
+	}
+}
