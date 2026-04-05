@@ -454,6 +454,14 @@ func TestBdExecutorExitError_ReturnsBdError(t *testing.T) {
 	}
 }
 
+func TestBdExecutorDatabaseLock_ReturnsErrDatabaseLocked(t *testing.T) {
+	exec := &BdExecutor{BinPath: "sh"}
+	_, err := exec.Execute("-c", `echo '{"error": "failed to open database: embeddeddolt: another process holds the exclusive lock"}' >&2; exit 1`)
+	if !errors.Is(err, ErrDatabaseLocked) {
+		t.Errorf("expected ErrDatabaseLocked, got %v", err)
+	}
+}
+
 func TestParseIssueListInvalidJSON(t *testing.T) {
 	_, err := ParseIssueList([]byte(`not json`))
 	if err == nil {

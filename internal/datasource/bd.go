@@ -39,6 +39,9 @@ func (e *BdExecutor) Execute(args ...string) ([]byte, error) {
 			if strings.Contains(stderr, "no beads database found") {
 				return nil, fmt.Errorf("%w: %s", ErrProjectNotInitialized, strings.TrimSpace(stderr))
 			}
+			if strings.Contains(stderr, "exclusive lock") {
+				return nil, fmt.Errorf("%w: %s", ErrDatabaseLocked, strings.TrimSpace(stderr))
+			}
 			return nil, &BdError{Args: args, Stderr: strings.TrimSpace(stderr), Err: err}
 		}
 		return nil, fmt.Errorf("bd %v: %w", args, err)

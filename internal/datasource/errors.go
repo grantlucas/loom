@@ -14,6 +14,9 @@ var ErrProjectNotInitialized = errors.New("no beads project found")
 // ErrMalformedResponse indicates bd returned output that could not be parsed.
 var ErrMalformedResponse = errors.New("malformed response from bd")
 
+// ErrDatabaseLocked indicates another process holds the beads database lock.
+var ErrDatabaseLocked = errors.New("beads database is locked by another process")
+
 // BdError wraps a non-zero exit from the bd binary with stderr context.
 type BdError struct {
 	Args   []string

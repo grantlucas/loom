@@ -502,6 +502,8 @@ func friendlyError(err error) string {
 		return "No beads project found. Run 'bd init' to initialize."
 	case errors.Is(err, datasource.ErrMalformedResponse):
 		return "Unexpected response from bd. Check bd version."
+	case errors.Is(err, datasource.ErrDatabaseLocked):
+		return "Database locked by another process. Close other bd commands and retry."
 	default:
 		return "Error: " + err.Error()
 	}

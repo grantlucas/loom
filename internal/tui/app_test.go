@@ -511,6 +511,19 @@ func TestApp_View_ShowsFriendlyMessageForErrMalformedResponse(t *testing.T) {
 	}
 }
 
+func TestApp_View_ShowsFriendlyMessageForErrDatabaseLocked(t *testing.T) {
+	app := newTestApp()
+	app.loading = false
+	app.err = fmt.Errorf("%w: embeddeddolt: exclusive lock", datasource.ErrDatabaseLocked)
+	view := app.View()
+	if !strings.Contains(view, "locked by another process") {
+		t.Errorf("expected database locked message, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Close other bd commands") {
+		t.Errorf("expected guidance to close bd processes, got:\n%s", view)
+	}
+}
+
 func TestApp_View_ShowsRawErrorForUnknownErrors(t *testing.T) {
 	app := newTestApp()
 	app.loading = false
