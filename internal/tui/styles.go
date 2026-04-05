@@ -18,6 +18,12 @@ var (
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("240"))
 
+	// Watch mode indicator
+	watchIndicatorStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("46")).
+				Padding(0, 1)
+
 	// Status bar at bottom
 	statusBarStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("243"))

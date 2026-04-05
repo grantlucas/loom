@@ -413,5 +413,8 @@ func (a App) renderTabBar() string {
 			tabs = append(tabs, inactiveTabStyle.Render(tab.String()))
 		}
 	}
+	if a.watchMode {
+		tabs = append(tabs, watchIndicatorStyle.Render("WATCH"))
+	}
 	return tabBarStyle.Render(strings.Join(tabs, ""))
 }

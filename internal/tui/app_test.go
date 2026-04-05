@@ -1616,3 +1616,19 @@ func TestApp_HelpShowsFocusKey(t *testing.T) {
 		t.Errorf("help should mention Focus, got:\n%s", out)
 	}
 }
+
+func TestApp_View_WatchIndicator_ShownWhenActive(t *testing.T) {
+	app := NewApp(&mockDataSource{}, 5*time.Second, true)
+	output := app.View()
+	if !strings.Contains(output, "WATCH") {
+		t.Error("expected View() to contain watch indicator when watch mode is active")
+	}
+}
+
+func TestApp_View_WatchIndicator_HiddenWhenInactive(t *testing.T) {
+	app := NewApp(&mockDataSource{}, 5*time.Second, false)
+	output := app.View()
+	if strings.Contains(output, "WATCH") {
+		t.Error("expected View() NOT to contain watch indicator when watch mode is inactive")
+	}
+}
