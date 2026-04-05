@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/grantlucas/loom/internal/datasource"
 )
 
@@ -267,6 +268,24 @@ func TestListView_RendersIssueData(t *testing.T) {
 	}
 }
 
+func enterFilterMode(lv *ListView) {
+	lv.Update(keyMsg('/'))
+}
+
+func typeText(lv *ListView, text string) {
+	for _, r := range text {
+		lv.Update(keyMsg(r))
+	}
+}
+
+func escKey() tea.Msg {
+	return tea.KeyMsg{Type: tea.KeyEscape}
+}
+
+func enterKey() tea.Msg {
+	return tea.KeyMsg{Type: tea.KeyEnter}
+}
+
 func TestListView_SlashEntersFilterMode(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
@@ -278,5 +297,53 @@ func TestListView_SlashEntersFilterMode(t *testing.T) {
 	view := lv.View()
 	if !strings.Contains(view, "Filter:") {
 		t.Errorf("expected filter prompt in view after '/', got:\n%s", view)
+	}
+}
+
+func TestListView_EscExitsFilterMode(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "First"},
+		{ID: "a-2", Title: "Second"},
+	})
+
+	enterFilterMode(lv)
+	lv.Update(escKey())
+
+	view := lv.View()
+	if strings.Contains(view, "Filter:") {
+		t.Error("expected filter prompt to be hidden after Esc")
+	}
+	// Should show all issues (no filter active)
+	if !strings.Contains(view, "2 issues") {
+		t.Errorf("expected '2 issues' after Esc clears filter, got:\n%s", view)
+	}
+}
+
+func TestListView_FreetextFilterMatchesTitleAndID(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "loom-1", Title: "Fix login bug"},
+		{ID: "loom-2", Title: "Add dashboard"},
+		{ID: "loom-3", Title: "Login page redesign"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "login")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	// Should show 2 of 3 (both login-related issues)
+	if !strings.Contains(view, "2 of 3") {
+		t.Errorf("expected '2 of 3' in filtered view, got:\n%s", view)
+	}
+	if !strings.Contains(view, "loom-1") {
+		t.Error("expected loom-1 (Fix login bug) in filtered results")
+	}
+	if !strings.Contains(view, "loom-3") {
+		t.Error("expected loom-3 (Login page redesign) in filtered results")
+	}
+	if strings.Contains(view, "loom-2") {
+		t.Error("expected loom-2 (Add dashboard) to be filtered out")
 	}
 }

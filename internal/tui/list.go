@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
@@ -215,7 +216,57 @@ func (v *ListView) applyFilter() {
 	v.sortAndRefresh()
 }
 
-func matchesFilter(_ datasource.Issue, _ string) bool {
+type parsedFilter struct {
+	fields   map[string]string
+	freetext string
+}
+
+func parseFilter(text string) parsedFilter {
+	pf := parsedFilter{fields: make(map[string]string)}
+	var freeWords []string
+	for _, token := range strings.Fields(text) {
+		if idx := strings.Index(token, ":"); idx > 0 && idx < len(token)-1 {
+			pf.fields[strings.ToLower(token[:idx])] = strings.ToLower(token[idx+1:])
+		} else {
+			freeWords = append(freeWords, token)
+		}
+	}
+	pf.freetext = strings.ToLower(strings.Join(freeWords, " "))
+	return pf
+}
+
+func matchesFilter(issue datasource.Issue, filterText string) bool {
+	pf := parseFilter(filterText)
+
+	if pf.freetext != "" {
+		titleLower := strings.ToLower(issue.Title)
+		idLower := strings.ToLower(issue.ID)
+		if !strings.Contains(titleLower, pf.freetext) && !strings.Contains(idLower, pf.freetext) {
+			return false
+		}
+	}
+
+	for field, value := range pf.fields {
+		switch field {
+		case "status":
+			if strings.ToLower(issue.Status) != value {
+				return false
+			}
+		case "priority":
+			if fmt.Sprintf("%d", issue.Priority) != value {
+				return false
+			}
+		case "type":
+			if strings.ToLower(issue.IssueType) != value {
+				return false
+			}
+		case "assignee":
+			if strings.ToLower(issue.Assignee) != value {
+				return false
+			}
+		}
+	}
+
 	return true
 }
 
