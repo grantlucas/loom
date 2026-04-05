@@ -55,7 +55,7 @@ func (d *DashboardView) Update(_ tea.Msg) tea.Cmd {
 // View renders the dashboard.
 func (d *DashboardView) View() string {
 	if len(d.issues) == 0 {
-		return "  No data loaded"
+		return "  No issues found"
 	}
 
 	var b strings.Builder

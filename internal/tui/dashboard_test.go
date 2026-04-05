@@ -30,8 +30,8 @@ func TestDashboardView_Update_ReturnsNilCmd(t *testing.T) {
 func TestDashboardView_EmptyState(t *testing.T) {
 	dv := NewDashboardView()
 	out := dv.View()
-	if !strings.Contains(out, "No data loaded") {
-		t.Error("empty dashboard should show 'No data loaded'")
+	if !strings.Contains(out, "No issues found") {
+		t.Errorf("empty dashboard should show 'No issues found', got: %s", out)
 	}
 }
 
