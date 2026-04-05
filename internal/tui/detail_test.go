@@ -366,6 +366,134 @@ func TestDetailView_RenderContent_NilDetail(t *testing.T) {
 	}
 }
 
+func TestDetailView_RelationCount_Empty(t *testing.T) {
+	dv := NewDetailView()
+	if dv.RelationCount() != 0 {
+		t.Error("expected 0 relations when no detail set")
+	}
+}
+
+func TestDetailView_RelationCount_WithRelations(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail()) // 1 dep + 1 dependent = 2
+	if dv.RelationCount() != 2 {
+		t.Errorf("expected 2 relations, got %d", dv.RelationCount())
+	}
+}
+
+func TestDetailView_Relations_CombinesDepsAndDependents(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail())
+	rels := dv.relations()
+	if len(rels) != 2 {
+		t.Fatalf("expected 2 relations, got %d", len(rels))
+	}
+	if rels[0].ID != "proj-1" {
+		t.Errorf("expected first relation to be dependency proj-1, got %q", rels[0].ID)
+	}
+	if rels[1].ID != "proj-3" {
+		t.Errorf("expected second relation to be dependent proj-3, got %q", rels[1].ID)
+	}
+}
+
+func TestDetailView_SelectedRelationID_Default(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail())
+	if dv.SelectedRelationID() != "proj-1" {
+		t.Errorf("expected default selection 'proj-1', got %q", dv.SelectedRelationID())
+	}
+}
+
+func TestDetailView_SelectedRelationID_NoRelations(t *testing.T) {
+	dv := NewDetailView()
+	d := testDetail()
+	d.Dependencies = nil
+	d.Dependents = nil
+	dv.SetDetail(d)
+	if dv.SelectedRelationID() != "" {
+		t.Error("expected empty string when no relations")
+	}
+}
+
+func TestDetailView_SelectedRelationID_NoDetail(t *testing.T) {
+	dv := NewDetailView()
+	if dv.SelectedRelationID() != "" {
+		t.Error("expected empty string when no detail set")
+	}
+}
+
+func TestDetailView_CursorDown_MovesToNext(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail()) // 2 relations
+	dv.Update(keyMsg('j'))
+	if dv.SelectedRelationID() != "proj-3" {
+		t.Errorf("expected cursor to move to proj-3, got %q", dv.SelectedRelationID())
+	}
+}
+
+func TestDetailView_CursorUp_MovesToPrevious(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail())
+	dv.Update(keyMsg('j')) // move to index 1
+	dv.Update(keyMsg('k')) // move back to index 0
+	if dv.SelectedRelationID() != "proj-1" {
+		t.Errorf("expected cursor back at proj-1, got %q", dv.SelectedRelationID())
+	}
+}
+
+func TestDetailView_CursorDown_ClampsAtEnd(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail()) // 2 relations
+	dv.Update(keyMsg('j'))     // index 1
+	dv.Update(keyMsg('j'))     // should stay at 1
+	if dv.SelectedRelationID() != "proj-3" {
+		t.Errorf("expected cursor clamped at proj-3, got %q", dv.SelectedRelationID())
+	}
+}
+
+func TestDetailView_CursorUp_ClampsAtZero(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail())
+	dv.Update(keyMsg('k')) // should stay at 0
+	if dv.SelectedRelationID() != "proj-1" {
+		t.Errorf("expected cursor clamped at proj-1, got %q", dv.SelectedRelationID())
+	}
+}
+
+func TestDetailView_SetDetail_ResetsCursor(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail())
+	dv.Update(keyMsg('j')) // move to index 1
+	dv.SetDetail(testDetail()) // should reset
+	if dv.relationCursor != 0 {
+		t.Errorf("expected cursor reset to 0, got %d", dv.relationCursor)
+	}
+}
+
+func TestDetailView_View_HighlightsSelectedRelation(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail())
+	view := dv.View()
+	// The selected relation should have a highlight marker ">"
+	if !strings.Contains(view, "> ") {
+		t.Error("expected '>' marker for selected relation")
+	}
+}
+
+func TestDetailView_CursorNavigation_NoRelations(t *testing.T) {
+	dv := NewDetailView()
+	d := testDetail()
+	d.Dependencies = nil
+	d.Dependents = nil
+	dv.SetDetail(d)
+	// Should not panic
+	dv.Update(keyMsg('j'))
+	dv.Update(keyMsg('k'))
+	if dv.SelectedRelationID() != "" {
+		t.Error("expected empty selection with no relations")
+	}
+}
+
 var errTest = errForTest("test error")
 
 type errForTest string

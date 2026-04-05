@@ -33,4 +33,16 @@ var (
 
 	detailLabelStyle = lipgloss.NewStyle().
 				Faint(true)
+
+	// Relation selection highlight
+	relationSelectedStyle = lipgloss.NewStyle().
+				Reverse(true)
+
+	// Breadcrumb trail
+	breadcrumbStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("243"))
+
+	// Goto prompt
+	gotoPromptStyle = lipgloss.NewStyle().
+			Bold(true)
 )

@@ -1,6 +1,10 @@
 package tui
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 func TestActiveTabStyle_IsBold(t *testing.T) {
 	if !activeTabStyle.GetBold() {
@@ -49,5 +53,24 @@ func TestDetailSectionStyle_IsBold(t *testing.T) {
 func TestDetailLabelStyle_IsDimmed(t *testing.T) {
 	if !detailLabelStyle.GetFaint() {
 		t.Error("detail label style should be faint/dimmed")
+	}
+}
+
+func TestRelationSelectedStyle_IsReverse(t *testing.T) {
+	if !relationSelectedStyle.GetReverse() {
+		t.Error("relation selected style should be reverse")
+	}
+}
+
+func TestBreadcrumbStyle_HasForegroundColor(t *testing.T) {
+	fg := breadcrumbStyle.GetForeground()
+	if fg == (lipgloss.NoColor{}) {
+		t.Error("breadcrumb style should have a foreground color")
+	}
+}
+
+func TestGotoPromptStyle_IsBold(t *testing.T) {
+	if !gotoPromptStyle.GetBold() {
+		t.Error("goto prompt style should be bold")
 	}
 }

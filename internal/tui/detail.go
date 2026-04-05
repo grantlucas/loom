@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -12,10 +13,11 @@ import (
 
 // DetailView displays full detail for a single issue with a scrollable viewport.
 type DetailView struct {
-	detail   *datasource.IssueDetail
-	viewport viewport.Model
-	loading  bool
-	err      error
+	detail         *datasource.IssueDetail
+	viewport       viewport.Model
+	loading        bool
+	err            error
+	relationCursor int
 }
 
 // NewDetailView creates a new DetailView.
@@ -28,6 +30,7 @@ func (v *DetailView) SetDetail(d *datasource.IssueDetail) {
 	v.detail = d
 	v.loading = false
 	v.err = nil
+	v.relationCursor = 0
 	v.viewport.SetContent(v.renderContent())
 }
 
@@ -44,8 +47,58 @@ func (v *DetailView) SetError(err error) {
 	v.loading = false
 }
 
+// relations returns the combined list of dependencies and dependents.
+func (v *DetailView) relations() []datasource.ExpandedRelation {
+	if v.detail == nil {
+		return nil
+	}
+	rels := make([]datasource.ExpandedRelation, 0, len(v.detail.Dependencies)+len(v.detail.Dependents))
+	rels = append(rels, v.detail.Dependencies...)
+	rels = append(rels, v.detail.Dependents...)
+	return rels
+}
+
+// RelationCount returns the number of combined relations.
+func (v *DetailView) RelationCount() int {
+	return len(v.relations())
+}
+
+// SelectedRelationID returns the ID of the currently selected relation,
+// or empty string if there are no relations.
+func (v *DetailView) SelectedRelationID() string {
+	rels := v.relations()
+	if len(rels) == 0 {
+		return ""
+	}
+	return rels[v.relationCursor].ID
+}
+
+var (
+	cursorDown = key.NewBinding(key.WithKeys("j"))
+	cursorUp   = key.NewBinding(key.WithKeys("k"))
+)
+
 // Update handles input messages, delegating to the viewport for scrolling.
 func (v *DetailView) Update(msg tea.Msg) tea.Cmd {
+	if kmsg, ok := msg.(tea.KeyMsg); ok {
+		count := v.RelationCount()
+		if count > 0 {
+			switch {
+			case key.Matches(kmsg, cursorDown):
+				if v.relationCursor < count-1 {
+					v.relationCursor++
+				}
+				v.viewport.SetContent(v.renderContent())
+				return nil
+			case key.Matches(kmsg, cursorUp):
+				if v.relationCursor > 0 {
+					v.relationCursor--
+				}
+				v.viewport.SetContent(v.renderContent())
+				return nil
+			}
+		}
+	}
 	var cmd tea.Cmd
 	v.viewport, cmd = v.viewport.Update(msg)
 	return cmd
@@ -114,16 +167,24 @@ func (v *DetailView) renderContent() string {
 	b.WriteString("\n")
 	b.WriteString(detailSectionStyle.Render(fmt.Sprintf("── Dependencies (%d) ─────────────────────────────", len(d.Dependencies))))
 	b.WriteString("\n\n")
+	relIndex := 0
 	if len(d.Dependencies) == 0 {
 		b.WriteString("  None\n")
 	} else {
 		for _, dep := range d.Dependencies {
-			b.WriteString(fmt.Sprintf("  %s %-14s  %-40s  %s\n",
+			line := fmt.Sprintf("%s %-14s  %-40s  %s",
 				relationStatusIndicator(dep.Status),
 				dep.ID,
 				dep.Title,
 				dep.Status,
-			))
+			)
+			if relIndex == v.relationCursor {
+				b.WriteString(relationSelectedStyle.Render("> " + line))
+			} else {
+				b.WriteString("  " + line)
+			}
+			b.WriteString("\n")
+			relIndex++
 		}
 	}
 
@@ -135,12 +196,19 @@ func (v *DetailView) renderContent() string {
 		b.WriteString("  None\n")
 	} else {
 		for _, dep := range d.Dependents {
-			b.WriteString(fmt.Sprintf("  %s %-14s  %-40s  %s\n",
+			line := fmt.Sprintf("%s %-14s  %-40s  %s",
 				relationStatusIndicator(dep.Status),
 				dep.ID,
 				dep.Title,
 				dep.Status,
-			))
+			)
+			if relIndex == v.relationCursor {
+				b.WriteString(relationSelectedStyle.Render("> " + line))
+			} else {
+				b.WriteString("  " + line)
+			}
+			b.WriteString("\n")
+			relIndex++
 		}
 	}
 
