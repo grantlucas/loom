@@ -59,9 +59,12 @@ type App struct {
 
 // NewApp creates a new App wired to the given DataSource.
 func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
+	views := map[Tab]View{
+		TabIssues: NewListView(),
+	}
 	return App{
 		activeTab: TabDashboard,
-		views:     make(map[Tab]View),
+		views:     views,
 		keys:      DefaultKeyMap(),
 		ds:        ds,
 		interval:  interval,

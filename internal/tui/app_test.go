@@ -72,6 +72,17 @@ func TestNewApp_SetsWatchMode(t *testing.T) {
 	}
 }
 
+func TestNewApp_RegistersListView(t *testing.T) {
+	app := newTestApp()
+	v, ok := app.views[TabIssues]
+	if !ok {
+		t.Fatal("expected TabIssues view to be registered")
+	}
+	if _, ok := v.(*ListView); !ok {
+		t.Errorf("expected *ListView, got %T", v)
+	}
+}
+
 func TestNewApp_ImplementsTeaModel(t *testing.T) {
 	var _ tea.Model = newTestApp()
 }
