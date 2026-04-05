@@ -114,7 +114,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.activeTab = TabCriticalPath
 			return a, nil
 		case key.Matches(msg, a.keys.Refresh):
-			return a, func() tea.Msg { return RefreshMsg{} }
+			if inv, ok := a.ds.(interface{ Invalidate() }); ok {
+				inv.Invalidate()
+			}
+			return a, a.fetchIssues()
 		case key.Matches(msg, a.keys.Watch):
 			a.watchMode = !a.watchMode
 			return a, nil

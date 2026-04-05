@@ -251,11 +251,11 @@ func TestApp_RefreshKey(t *testing.T) {
 	app := newTestApp()
 	_, cmd := app.Update(keyMsg('r'))
 	if cmd == nil {
-		t.Fatal("expected refresh command from r key, got nil")
+		t.Fatal("expected fetch command from r key, got nil")
 	}
 	msg := cmd()
-	if _, ok := msg.(RefreshMsg); !ok {
-		t.Errorf("expected RefreshMsg, got %T", msg)
+	if _, ok := msg.(IssuesLoadedMsg); !ok {
+		t.Errorf("expected IssuesLoadedMsg, got %T", msg)
 	}
 }
 
@@ -375,6 +375,53 @@ func TestApp_Update_ErrMsg_SetsError(t *testing.T) {
 	a := model.(App)
 	if a.err == nil || a.err.Error() != "fetch failed" {
 		t.Errorf("expected error 'fetch failed', got %v", a.err)
+	}
+}
+
+func TestApp_Update_RefreshKey_InvalidatesAndFetches(t *testing.T) {
+	ds := &mockDataSource{issues: []datasource.Issue{{ID: "r-1"}}}
+	app := newTestAppWithDS(ds)
+	_, cmd := app.Update(keyMsg('r'))
+	if cmd == nil {
+		t.Fatal("expected fetch command from refresh key")
+	}
+	msg := cmd()
+	if _, ok := msg.(IssuesLoadedMsg); !ok {
+		t.Errorf("expected IssuesLoadedMsg, got %T", msg)
+	}
+	if !ds.invalidated {
+		t.Error("expected Invalidate() to be called on refresh")
+	}
+}
+
+// mockDataSourceNoInvalidate implements DataSource without Invalidate.
+type mockDataSourceNoInvalidate struct {
+	issues []datasource.Issue
+	err    error
+}
+
+func (m *mockDataSourceNoInvalidate) ListIssues() ([]datasource.Issue, error) {
+	return m.issues, m.err
+}
+
+func (m *mockDataSourceNoInvalidate) GetIssue(string) (*datasource.IssueDetail, error) {
+	return nil, nil
+}
+
+func (m *mockDataSourceNoInvalidate) ListReady() ([]datasource.Issue, error) {
+	return nil, nil
+}
+
+func TestApp_Update_RefreshKey_NoInvalidator(t *testing.T) {
+	ds := &mockDataSourceNoInvalidate{issues: []datasource.Issue{{ID: "n-1"}}}
+	app := NewApp(ds, 5*time.Second, false)
+	_, cmd := app.Update(keyMsg('r'))
+	if cmd == nil {
+		t.Fatal("expected fetch command even without Invalidator")
+	}
+	msg := cmd()
+	if _, ok := msg.(IssuesLoadedMsg); !ok {
+		t.Errorf("expected IssuesLoadedMsg, got %T", msg)
 	}
 }
 
