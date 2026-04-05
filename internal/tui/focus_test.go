@@ -185,6 +185,11 @@ func TestFocusView_SelectedNodeID_Downstream(t *testing.T) {
 	if id == fv.items[0].NodeID {
 		t.Error("downstream selection should differ from parent")
 	}
+	// Verify View renders with cursor on downstream line
+	out := fv.View()
+	if !strings.Contains(out, id) {
+		t.Errorf("view should contain selected downstream ID %q", id)
+	}
 }
 
 func TestFocusView_SelectedNodeID_Empty(t *testing.T) {

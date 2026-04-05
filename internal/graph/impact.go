@@ -70,9 +70,6 @@ func DownstreamImpact(g *DAG, readyIDs []string, priorities map[string]int) []Im
 				cur := topo[0]
 				topo = topo[1:]
 				for _, succ := range g.Successors(cur) {
-					if !visited[succ] {
-						continue
-					}
 					nd := dist[cur] + 1
 					if nd > dist[succ] {
 						dist[succ] = nd
