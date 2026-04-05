@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/grantlucas/loom/internal/datasource"
 )
 
 func TestActiveTabStyle_IsBold(t *testing.T) {
@@ -131,6 +132,45 @@ func TestStatusStyle_UnknownStatusDefaultsToOpen(t *testing.T) {
 	got := style.GetForeground()
 	if got != lipgloss.Color("252") {
 		t.Errorf("StatusStyle(unknown): got foreground %v, want white (252)", got)
+	}
+}
+
+func TestStyledStatus_ReturnsCorrectIndicators(t *testing.T) {
+	tests := []struct {
+		status    string
+		depCount  int
+		wantIcon  string
+	}{
+		{"closed", 0, "✓"},
+		{"in_progress", 0, "◐"},
+		{"open", 0, "○"},
+		{"open", 2, "●"},
+	}
+	for _, tt := range tests {
+		issue := datasource.Issue{Status: tt.status, DependencyCount: tt.depCount}
+		result := StyledStatus(issue)
+		if !strings.Contains(result, tt.wantIcon) {
+			t.Errorf("StyledStatus(%s, deps=%d): result %q does not contain %q",
+				tt.status, tt.depCount, result, tt.wantIcon)
+		}
+	}
+}
+
+func TestStyledStatusSimple_ReturnsCorrectIndicators(t *testing.T) {
+	tests := []struct {
+		status   string
+		wantIcon string
+	}{
+		{"closed", "✓"},
+		{"in_progress", "◐"},
+		{"open", "○"},
+	}
+	for _, tt := range tests {
+		result := StyledStatusSimple(tt.status)
+		if !strings.Contains(result, tt.wantIcon) {
+			t.Errorf("StyledStatusSimple(%q): result %q does not contain %q",
+				tt.status, result, tt.wantIcon)
+		}
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/grantlucas/loom/internal/datasource"
 )
 
 var (
@@ -98,4 +99,38 @@ func StatusStyle(status string) lipgloss.Style {
 	default:
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
 	}
+}
+
+// StyledStatus returns a color-coded status indicator for an issue.
+// Uses ● for open issues with dependencies, ○ for open, ◐ for in_progress, ✓ for closed.
+func StyledStatus(issue datasource.Issue) string {
+	var icon string
+	switch issue.Status {
+	case "closed":
+		icon = "✓"
+	case "in_progress":
+		icon = "◐"
+	default:
+		if issue.DependencyCount > 0 {
+			icon = "●"
+		} else {
+			icon = "○"
+		}
+	}
+	return StatusStyle(issue.Status).Render(icon)
+}
+
+// StyledStatusSimple returns a color-coded status indicator from just a status string.
+// Uses ○ for open (no dependency info available), ◐ for in_progress, ✓ for closed.
+func StyledStatusSimple(status string) string {
+	var icon string
+	switch status {
+	case "closed":
+		icon = "✓"
+	case "in_progress":
+		icon = "◐"
+	default:
+		icon = "○"
+	}
+	return StatusStyle(status).Render(icon)
 }
