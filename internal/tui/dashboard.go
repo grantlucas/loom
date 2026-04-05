@@ -10,17 +10,18 @@ import (
 	"github.com/grantlucas/loom/internal/datasource"
 )
 
-const barMaxWidth = 30
+const defaultBarMaxWidth = 30
 
 // DashboardView shows project health at a glance.
 type DashboardView struct {
-	issues []datasource.Issue
-	ready  []datasource.Issue
+	issues      []datasource.Issue
+	ready       []datasource.Issue
+	barMaxWidth int
 }
 
 // NewDashboardView creates a new DashboardView.
 func NewDashboardView() *DashboardView {
-	return &DashboardView{}
+	return &DashboardView{barMaxWidth: defaultBarMaxWidth}
 }
 
 // SetIssues updates the full issue list for computing stats.
@@ -34,7 +35,17 @@ func (d *DashboardView) SetReady(issues []datasource.Issue) {
 }
 
 // Resize adapts the dashboard layout to the given terminal dimensions.
-func (d *DashboardView) Resize(width, height int) {}
+func (d *DashboardView) Resize(width, height int) {
+	// Scale bar width: use ~40% of terminal width, clamped to reasonable range
+	barWidth := width * 2 / 5
+	if barWidth < 10 {
+		barWidth = 10
+	}
+	if barWidth > 80 {
+		barWidth = 80
+	}
+	d.barMaxWidth = barWidth
+}
 
 // Update handles messages. The dashboard has no interactive elements.
 func (d *DashboardView) Update(_ tea.Msg) tea.Cmd {
@@ -102,7 +113,7 @@ func (d *DashboardView) renderPriority(b *strings.Builder) {
 		count := dist[p]
 		barLen := count
 		if maxCount > 0 {
-			barLen = (count * barMaxWidth) / maxCount
+			barLen = (count * d.barMaxWidth) / maxCount
 		}
 		if barLen < 1 {
 			barLen = 1

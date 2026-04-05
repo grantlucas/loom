@@ -398,3 +398,26 @@ func TestDashboardView_AllSectionHeaders(t *testing.T) {
 		}
 	}
 }
+
+func TestDashboardView_Resize_BarWidthScalesWithTerminal(t *testing.T) {
+	dv := NewDashboardView()
+	dv.SetIssues([]datasource.Issue{
+		{ID: "1", Status: "open", Priority: 0},
+		{ID: "2", Status: "open", Priority: 0},
+	})
+
+	dv.Resize(80, 30)
+	out80 := dv.View()
+
+	dv.Resize(160, 30)
+	out160 := dv.View()
+
+	// Count the bar characters (█) in each output
+	bars80 := strings.Count(out80, "█")
+	bars160 := strings.Count(out160, "█")
+
+	if bars160 <= bars80 {
+		t.Errorf("expected wider terminal to produce wider bars: got %d chars at 160w vs %d at 80w",
+			bars160, bars80)
+	}
+}
