@@ -453,6 +453,19 @@ func TestApp_Update_ErrMsg_ClearsLoading(t *testing.T) {
 	}
 }
 
+func TestApp_View_SuccessfulLoadClearsError(t *testing.T) {
+	app := newTestApp()
+	// Simulate error then successful load
+	model, _ := app.Update(ErrMsg{Err: errors.New("fail")})
+	app = model.(App)
+	model, _ = app.Update(IssuesLoadedMsg{Issues: []datasource.Issue{{ID: "x"}}})
+	app = model.(App)
+	view := app.View()
+	if strings.Contains(view, "Error") {
+		t.Errorf("expected error to be cleared after successful load, got:\n%s", view)
+	}
+}
+
 func TestApp_View_ShowsErrorWhenSet(t *testing.T) {
 	app := newTestApp()
 	app.loading = false
