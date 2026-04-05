@@ -9,7 +9,7 @@ import (
 func ParseIssueList(data []byte) ([]Issue, error) {
 	var issues []Issue
 	if err := json.Unmarshal(data, &issues); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", ErrMalformedResponse, err)
 	}
 	return issues, nil
 }
@@ -19,7 +19,7 @@ func ParseIssueList(data []byte) ([]Issue, error) {
 func ParseIssueDetail(data []byte) (*IssueDetail, error) {
 	var details []IssueDetail
 	if err := json.Unmarshal(data, &details); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %w", ErrMalformedResponse, err)
 	}
 	if len(details) == 0 {
 		return nil, fmt.Errorf("empty response from bd show")

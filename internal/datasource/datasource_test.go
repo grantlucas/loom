@@ -450,3 +450,17 @@ func TestParseIssueListInvalidJSON(t *testing.T) {
 		t.Fatal("expected error for invalid JSON, got nil")
 	}
 }
+
+func TestParseIssueListInvalidJSON_ReturnsErrMalformedResponse(t *testing.T) {
+	_, err := ParseIssueList([]byte(`not json`))
+	if !errors.Is(err, ErrMalformedResponse) {
+		t.Errorf("expected ErrMalformedResponse, got %v", err)
+	}
+}
+
+func TestParseIssueDetailInvalidJSON_ReturnsErrMalformedResponse(t *testing.T) {
+	_, err := ParseIssueDetail([]byte(`not json`))
+	if !errors.Is(err, ErrMalformedResponse) {
+		t.Errorf("expected ErrMalformedResponse, got %v", err)
+	}
+}

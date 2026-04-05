@@ -11,6 +11,9 @@ var ErrBdNotFound = errors.New("bd executable not found")
 // ErrProjectNotInitialized indicates no .beads directory was found.
 var ErrProjectNotInitialized = errors.New("no beads project found")
 
+// ErrMalformedResponse indicates bd returned output that could not be parsed.
+var ErrMalformedResponse = errors.New("malformed response from bd")
+
 // BdError wraps a non-zero exit from the bd binary with stderr context.
 type BdError struct {
 	Args   []string
