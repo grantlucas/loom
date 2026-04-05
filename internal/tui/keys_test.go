@@ -21,6 +21,8 @@ func TestKeyMap_AllBindingsHaveHelp(t *testing.T) {
 		{"Watch", km.Watch},
 		{"Help", km.Help},
 		{"Quit", km.Quit},
+		{"Enter", km.Enter},
+		{"Back", km.Back},
 	}
 
 	for _, b := range bindings {
@@ -52,6 +54,8 @@ func TestKeyMap_BindingKeys(t *testing.T) {
 		{"Watch", km.Watch, []string{"w"}},
 		{"Help", km.Help, []string{"?"}},
 		{"Quit", km.Quit, []string{"q", "ctrl+c"}},
+		{"Enter", km.Enter, []string{"enter"}},
+		{"Back", km.Back, []string{"esc"}},
 	}
 
 	for _, tt := range tests {

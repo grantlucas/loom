@@ -12,6 +12,8 @@ type KeyMap struct {
 	Watch        key.Binding
 	Help         key.Binding
 	Quit         key.Binding
+	Enter        key.Binding
+	Back         key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -48,6 +50,14 @@ func DefaultKeyMap() KeyMap {
 		Quit: key.NewBinding(
 			key.WithKeys("q", "ctrl+c"),
 			key.WithHelp("q", "quit"),
+		),
+		Enter: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "open detail"),
+		),
+		Back: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "back"),
 		),
 	}
 }
