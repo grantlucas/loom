@@ -64,8 +64,9 @@ type App struct {
 // NewApp creates a new App wired to the given DataSource.
 func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 	views := map[Tab]View{
-		TabIssues: NewListView(),
-		TabDetail: NewDetailView(),
+		TabDashboard: NewDashboardView(),
+		TabIssues:    NewListView(),
+		TabDetail:    NewDetailView(),
 	}
 	ti := textinput.New()
 	ti.Placeholder = "issue ID"
@@ -82,7 +83,7 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 }
 
 func (a App) Init() tea.Cmd {
-	return a.fetchIssues()
+	return tea.Batch(a.fetchIssues(), a.fetchReady())
 }
 
 func tickMsg(t time.Time) tea.Msg {
@@ -103,6 +104,16 @@ func (a App) fetchIssues() tea.Cmd {
 	}
 }
 
+func (a App) fetchReady() tea.Cmd {
+	return func() tea.Msg {
+		issues, err := a.ds.ListReady()
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+		return ReadyLoadedMsg{Issues: issues}
+	}
+}
+
 func (a App) fetchIssueDetail(id string) tea.Cmd {
 	return func() tea.Msg {
 		detail, err := a.ds.GetIssue(id)
@@ -119,6 +130,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.err = nil
 		if lv, ok := a.views[TabIssues].(*ListView); ok {
 			lv.SetIssues(msg.Issues)
+		}
+		if dv, ok := a.views[TabDashboard].(*DashboardView); ok {
+			dv.SetIssues(msg.Issues)
+		}
+		return a, nil
+
+	case ReadyLoadedMsg:
+		if dv, ok := a.views[TabDashboard].(*DashboardView); ok {
+			dv.SetReady(msg.Issues)
 		}
 		return a, nil
 
@@ -142,6 +162,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.watchMode {
 			return a, tea.Batch(
 				a.fetchIssues(),
+				a.fetchReady(),
 				a.scheduleTick(),
 			)
 		}
@@ -235,7 +256,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if inv, ok := a.ds.(interface{ Invalidate() }); ok {
 				inv.Invalidate()
 			}
-			return a, a.fetchIssues()
+			return a, tea.Batch(a.fetchIssues(), a.fetchReady())
 		case key.Matches(msg, a.keys.Watch):
 			a.watchMode = !a.watchMode
 			if a.watchMode {

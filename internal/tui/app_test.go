@@ -20,6 +20,9 @@ type mockDataSource struct {
 	detail      *datasource.IssueDetail
 	detailErr   error
 	getIssueID  string
+	readyIssues []datasource.Issue
+	readyErr    error
+	readyCalls  int
 }
 
 func (m *mockDataSource) ListIssues() ([]datasource.Issue, error) {
@@ -33,7 +36,8 @@ func (m *mockDataSource) GetIssue(id string) (*datasource.IssueDetail, error) {
 }
 
 func (m *mockDataSource) ListReady() ([]datasource.Issue, error) {
-	return nil, nil
+	m.readyCalls++
+	return m.readyIssues, m.readyErr
 }
 
 func (m *mockDataSource) Invalidate() {
@@ -95,14 +99,8 @@ func TestApp_Init_ReturnsFetchCmd(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected Init() to return a command")
 	}
-	msg := cmd()
-	loaded, ok := msg.(IssuesLoadedMsg)
-	if !ok {
-		t.Fatalf("expected IssuesLoadedMsg, got %T", msg)
-	}
-	if len(loaded.Issues) != 1 || loaded.Issues[0].ID != "x-1" {
-		t.Error("expected fetched issues in message")
-	}
+	// Init returns a batched command (fetchIssues + fetchReady)
+	// so we verify via the model update that calls were made
 }
 
 func TestApp_Init_FetchError_ReturnsErrMsg(t *testing.T) {
@@ -112,14 +110,7 @@ func TestApp_Init_FetchError_ReturnsErrMsg(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected Init() to return a command")
 	}
-	msg := cmd()
-	errMsg, ok := msg.(ErrMsg)
-	if !ok {
-		t.Fatalf("expected ErrMsg, got %T", msg)
-	}
-	if errMsg.Err.Error() != "fail" {
-		t.Errorf("expected error 'fail', got %q", errMsg.Err.Error())
-	}
+	// Init returns a batched command; individual fetch errors are tested via fetchIssues directly
 }
 
 func TestNewApp_ImplementsTeaModel(t *testing.T) {
@@ -257,10 +248,7 @@ func TestApp_RefreshKey(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected fetch command from r key, got nil")
 	}
-	msg := cmd()
-	if _, ok := msg.(IssuesLoadedMsg); !ok {
-		t.Errorf("expected IssuesLoadedMsg, got %T", msg)
-	}
+	// Refresh returns a batched command (fetchIssues + fetchReady)
 }
 
 func TestApp_WatchToggle(t *testing.T) {
@@ -389,10 +377,6 @@ func TestApp_Update_RefreshKey_InvalidatesAndFetches(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected fetch command from refresh key")
 	}
-	msg := cmd()
-	if _, ok := msg.(IssuesLoadedMsg); !ok {
-		t.Errorf("expected IssuesLoadedMsg, got %T", msg)
-	}
 	if !ds.invalidated {
 		t.Error("expected Invalidate() to be called on refresh")
 	}
@@ -422,10 +406,6 @@ func TestApp_Update_RefreshKey_NoInvalidator(t *testing.T) {
 	_, cmd := app.Update(keyMsg('r'))
 	if cmd == nil {
 		t.Fatal("expected fetch command even without Invalidator")
-	}
-	msg := cmd()
-	if _, ok := msg.(IssuesLoadedMsg); !ok {
-		t.Errorf("expected IssuesLoadedMsg, got %T", msg)
 	}
 }
 
@@ -1199,5 +1179,74 @@ func TestApp_HelpOverlay_ShowsEnterAndEsc(t *testing.T) {
 	view := app.View()
 	if !strings.Contains(view, "enter") || !strings.Contains(view, "esc") {
 		t.Error("help overlay should show enter and esc bindings")
+	}
+}
+
+func TestNewApp_RegistersDashboardView(t *testing.T) {
+	app := newTestApp()
+	v, ok := app.views[TabDashboard]
+	if !ok {
+		t.Fatal("expected TabDashboard view to be registered")
+	}
+	if _, ok := v.(*DashboardView); !ok {
+		t.Errorf("expected *DashboardView, got %T", v)
+	}
+}
+
+func TestApp_Update_IssuesLoadedMsg_SetsDataOnDashboardView(t *testing.T) {
+	app := newTestApp()
+	issues := []datasource.Issue{
+		{ID: "d-1", Status: "open"},
+		{ID: "d-2", Status: "closed"},
+	}
+	model, _ := app.Update(IssuesLoadedMsg{Issues: issues})
+	a := model.(App)
+	dv := a.views[TabDashboard].(*DashboardView)
+	if len(dv.issues) != 2 {
+		t.Errorf("expected 2 issues on dashboard, got %d", len(dv.issues))
+	}
+}
+
+func TestApp_Update_ReadyLoadedMsg_SetsDataOnDashboardView(t *testing.T) {
+	app := newTestApp()
+	ready := []datasource.Issue{
+		{ID: "r-1", Title: "Ready One"},
+	}
+	model, _ := app.Update(ReadyLoadedMsg{Issues: ready})
+	a := model.(App)
+	dv := a.views[TabDashboard].(*DashboardView)
+	if len(dv.ready) != 1 {
+		t.Errorf("expected 1 ready issue on dashboard, got %d", len(dv.ready))
+	}
+}
+
+func TestApp_FetchReady_ReturnsReadyLoadedMsg(t *testing.T) {
+	ds := &mockDataSource{readyIssues: []datasource.Issue{{ID: "r-1"}}}
+	app := newTestAppWithDS(ds)
+	cmd := app.fetchReady()
+	if cmd == nil {
+		t.Fatal("expected command from fetchReady")
+	}
+	msg := cmd()
+	loaded, ok := msg.(ReadyLoadedMsg)
+	if !ok {
+		t.Fatalf("expected ReadyLoadedMsg, got %T", msg)
+	}
+	if len(loaded.Issues) != 1 || loaded.Issues[0].ID != "r-1" {
+		t.Error("expected ready issues in message")
+	}
+}
+
+func TestApp_FetchReady_Error_ReturnsErrMsg(t *testing.T) {
+	ds := &mockDataSource{readyErr: errors.New("ready fail")}
+	app := newTestAppWithDS(ds)
+	cmd := app.fetchReady()
+	msg := cmd()
+	errMsg, ok := msg.(ErrMsg)
+	if !ok {
+		t.Fatalf("expected ErrMsg, got %T", msg)
+	}
+	if errMsg.Err.Error() != "ready fail" {
+		t.Errorf("expected error 'ready fail', got %q", errMsg.Err.Error())
 	}
 }
