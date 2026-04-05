@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -80,6 +81,40 @@ func TestNewApp_RegistersListView(t *testing.T) {
 	}
 	if _, ok := v.(*ListView); !ok {
 		t.Errorf("expected *ListView, got %T", v)
+	}
+}
+
+func TestApp_Init_ReturnsFetchCmd(t *testing.T) {
+	ds := &mockDataSource{issues: []datasource.Issue{{ID: "x-1"}}}
+	app := newTestAppWithDS(ds)
+	cmd := app.Init()
+	if cmd == nil {
+		t.Fatal("expected Init() to return a command")
+	}
+	msg := cmd()
+	loaded, ok := msg.(IssuesLoadedMsg)
+	if !ok {
+		t.Fatalf("expected IssuesLoadedMsg, got %T", msg)
+	}
+	if len(loaded.Issues) != 1 || loaded.Issues[0].ID != "x-1" {
+		t.Error("expected fetched issues in message")
+	}
+}
+
+func TestApp_Init_FetchError_ReturnsErrMsg(t *testing.T) {
+	ds := &mockDataSource{err: errors.New("fail")}
+	app := newTestAppWithDS(ds)
+	cmd := app.Init()
+	if cmd == nil {
+		t.Fatal("expected Init() to return a command")
+	}
+	msg := cmd()
+	errMsg, ok := msg.(ErrMsg)
+	if !ok {
+		t.Fatalf("expected ErrMsg, got %T", msg)
+	}
+	if errMsg.Err.Error() != "fail" {
+		t.Errorf("expected error 'fail', got %q", errMsg.Err.Error())
 	}
 }
 
@@ -304,11 +339,11 @@ func TestApp_ViewSwitchingChangesDelegate(t *testing.T) {
 	}
 }
 
-func TestApp_Init_ReturnsNil(t *testing.T) {
+func TestApp_Init_ReturnsCmd(t *testing.T) {
 	app := newTestApp()
 	cmd := app.Init()
-	if cmd != nil {
-		t.Error("Init() should return nil")
+	if cmd == nil {
+		t.Error("Init() should return a fetch command")
 	}
 }
 

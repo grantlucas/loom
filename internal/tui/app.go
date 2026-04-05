@@ -73,7 +73,17 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 }
 
 func (a App) Init() tea.Cmd {
-	return nil
+	return a.fetchIssues()
+}
+
+func (a App) fetchIssues() tea.Cmd {
+	return func() tea.Msg {
+		issues, err := a.ds.ListIssues()
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+		return IssuesLoadedMsg{Issues: issues}
+	}
 }
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
