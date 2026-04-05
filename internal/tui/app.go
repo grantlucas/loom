@@ -99,6 +99,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.err = msg.Err
 		return a, nil
 
+	case TickMsg:
+		if a.watchMode {
+			return a, tea.Batch(
+				a.fetchIssues(),
+				tea.Tick(a.interval, func(t time.Time) tea.Msg {
+					return TickMsg(t)
+				}),
+			)
+		}
+		return a, nil
+
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, a.keys.Dashboard):
@@ -120,6 +131,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, a.fetchIssues()
 		case key.Matches(msg, a.keys.Watch):
 			a.watchMode = !a.watchMode
+			if a.watchMode {
+				return a, tea.Tick(a.interval, func(t time.Time) tea.Msg {
+					return TickMsg(t)
+				})
+			}
 			return a, nil
 		case key.Matches(msg, a.keys.Help):
 			a.showHelp = !a.showHelp
