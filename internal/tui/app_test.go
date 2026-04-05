@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -473,6 +474,50 @@ func TestApp_View_ShowsErrorWhenSet(t *testing.T) {
 	view := app.View()
 	if !strings.Contains(view, "connection refused") {
 		t.Errorf("expected view to show error message, got:\n%s", view)
+	}
+}
+
+func TestApp_View_ShowsFriendlyMessageForErrBdNotFound(t *testing.T) {
+	app := newTestApp()
+	app.loading = false
+	app.err = fmt.Errorf("%w: exec: \"bd\": not found", datasource.ErrBdNotFound)
+	view := app.View()
+	if !strings.Contains(view, "bd not found") {
+		t.Errorf("expected friendly bd-not-found message, got:\n%s", view)
+	}
+	lower := strings.ToLower(view)
+	if !strings.Contains(lower, "install") || !strings.Contains(lower, "beads") {
+		t.Errorf("expected install guidance, got:\n%s", view)
+	}
+}
+
+func TestApp_View_ShowsFriendlyMessageForErrProjectNotInitialized(t *testing.T) {
+	app := newTestApp()
+	app.loading = false
+	app.err = fmt.Errorf("%w: no beads database found", datasource.ErrProjectNotInitialized)
+	view := app.View()
+	if !strings.Contains(view, "bd init") {
+		t.Errorf("expected 'bd init' guidance, got:\n%s", view)
+	}
+}
+
+func TestApp_View_ShowsFriendlyMessageForErrMalformedResponse(t *testing.T) {
+	app := newTestApp()
+	app.loading = false
+	app.err = fmt.Errorf("%w: invalid character", datasource.ErrMalformedResponse)
+	view := app.View()
+	if !strings.Contains(view, "Unexpected response") {
+		t.Errorf("expected malformed response message, got:\n%s", view)
+	}
+}
+
+func TestApp_View_ShowsRawErrorForUnknownErrors(t *testing.T) {
+	app := newTestApp()
+	app.loading = false
+	app.err = errors.New("something unexpected")
+	view := app.View()
+	if !strings.Contains(view, "something unexpected") {
+		t.Errorf("expected raw error in view, got:\n%s", view)
 	}
 }
 

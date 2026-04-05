@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -379,7 +380,7 @@ func (a App) View() string {
 	} else if a.loading {
 		b.WriteString("  Loading...")
 	} else if a.err != nil {
-		b.WriteString(errStyle.Render("  Error: " + a.err.Error()))
+		b.WriteString(errStyle.Render("  " + friendlyError(a.err)))
 	} else {
 		if a.activeTab == TabDetail {
 			b.WriteString(a.renderBreadcrumb())
@@ -491,4 +492,17 @@ func (a App) renderTabBar() string {
 		tabs = append(tabs, watchIndicatorStyle.Render("WATCH"))
 	}
 	return tabBarStyle.Render(strings.Join(tabs, ""))
+}
+
+func friendlyError(err error) string {
+	switch {
+	case errors.Is(err, datasource.ErrBdNotFound):
+		return "bd not found in PATH. Install beads: https://github.com/grantlucas/beads"
+	case errors.Is(err, datasource.ErrProjectNotInitialized):
+		return "No beads project found. Run 'bd init' to initialize."
+	case errors.Is(err, datasource.ErrMalformedResponse):
+		return "Unexpected response from bd. Check bd version."
+	default:
+		return "Error: " + err.Error()
+	}
 }
