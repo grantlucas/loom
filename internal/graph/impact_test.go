@@ -130,6 +130,63 @@ func TestDownstreamImpact_MaxDepthWithShortcut(t *testing.T) {
 	}
 }
 
+func TestDownstreamImpact_SortTiebreakByDepthThenPriority(t *testing.T) {
+	// Two ready nodes with same priority sum and unblock count, differ by depth
+	// a -> b (depth 1, pri sum = 3, unblock 1)
+	// c -> d -> e (depth 2, pri sum = 3, unblock 2)
+	// Wait - that differs by unblock. Let me make them equal in sum and count too.
+	// Actually, we just need to test the depth and priority tiebreakers.
+	// Let's use: same priSum, same unblockCount, differ by depth
+	// a -> b (depth 1, b=P1, priSum=3, unblock=1)
+	// c -> d -> e (depth 2, d=P3, e=P4, priSum=1+0=1, unblock=2)
+	// These differ in priSum so won't hit depth tiebreak.
+	// Let's make: a->b->c (depth 2, priSum=6, unblock=2), d->e->f (depth 2, priSum=6, unblock=2)
+	// Same priSum, same unblock, same depth — hits OwnPriority tiebreak
+	g := NewDAG()
+	g.AddEdge("a", "b")
+	g.AddEdge("b", "c")
+	g.AddEdge("d", "e")
+	g.AddEdge("e", "f")
+	// a is P2, d is P0. Both unblock 2 issues with same pri.
+	priorities := map[string]int{
+		"a": 2, "b": 1, "c": 1, // priSum = 3+3 = 6, depth 2
+		"d": 0, "e": 1, "f": 1, // priSum = 3+3 = 6, depth 2
+	}
+	results := DownstreamImpact(g, []string{"a", "d"}, priorities)
+	// Same priSum, same unblock, same depth -> tiebreak by OwnPriority (lower = first)
+	if results[0].NodeID != "d" {
+		t.Errorf("expected 'd' (P0) first on OwnPriority tiebreak, got %q", results[0].NodeID)
+	}
+}
+
+func TestDownstreamImpact_SortTiebreakByMaxDepth(t *testing.T) {
+	// Same priSum, same unblock count, differ by depth
+	// a -> b (depth 1, priSum = 3, unblock 1)
+	// c -> d -> e (depth 2, priSum = 3, unblock 1) — wait unblock differs
+	// Need same unblock count too: use one downstream each, same pri
+	// a -> b (depth 1, b=P1, priSum=3)
+	// c -> d -> e where d is not counted? No, d is downstream of c.
+	// Actually let's just have: a -> b (depth 1), c -> d (depth 1) but make d have a child
+	// c -> d -> e (depth 2, unblock 2) vs a -> b (depth 1, unblock 1)
+	// priSum differ. Hard to make same priSum + same unblock + diff depth.
+	// Let's do: a -> b -> c (depth 2, priSum 4, unblock 2), d -> e (depth 1, priSum 4, unblock 2)
+	// d -> e and d -> f (unblock 2, priSum = (4-p_e)+(4-p_f))
+	g := NewDAG()
+	g.AddEdge("a", "b")
+	g.AddEdge("b", "c")
+	g.AddEdge("d", "e")
+	g.AddEdge("d", "f")
+	// a: unblock 2 (b,c), depth 2
+	// d: unblock 2 (e,f), depth 1
+	// Make priSum equal: b=P2,c=P2 -> sum=4. e=P2,f=P2 -> sum=4.
+	priorities := map[string]int{"a": 1, "b": 2, "c": 2, "d": 1, "e": 2, "f": 2}
+	results := DownstreamImpact(g, []string{"a", "d"}, priorities)
+	// Same priSum (4), same unblock (2) -> tiebreak by depth (2 > 1)
+	if results[0].NodeID != "a" {
+		t.Errorf("expected 'a' first (deeper chain), got %q", results[0].NodeID)
+	}
+}
+
 func TestDownstreamImpact_BasicChain(t *testing.T) {
 	// a (ready) -> b -> c
 	// a should unblock 2 issues, with priority sum and max depth

@@ -130,6 +130,7 @@ func TestApp_TabSwitching(t *testing.T) {
 		{'i', TabIssues},
 		{'t', TabTree},
 		{'c', TabCriticalPath},
+		{'f', TabFocus},
 	}
 
 	for _, tt := range tests {
@@ -198,6 +199,7 @@ func TestApp_TabNames(t *testing.T) {
 		{TabDetail, "Detail"},
 		{TabTree, "Tree"},
 		{TabCriticalPath, "Critical Path"},
+		{TabFocus, "Focus"},
 	}
 
 	for _, tt := range tests {
@@ -1430,5 +1432,133 @@ func TestApp_EnterOnTree_NonTreeView_IsNoop(t *testing.T) {
 	}
 	if cmd != nil {
 		t.Error("expected nil cmd")
+	}
+}
+
+// --- Focus view wiring ---
+
+func TestNewApp_RegistersFocusView(t *testing.T) {
+	app := newTestApp()
+	v, ok := app.views[TabFocus]
+	if !ok {
+		t.Fatal("expected TabFocus view to be registered")
+	}
+	if _, ok := v.(*FocusView); !ok {
+		t.Errorf("expected *FocusView, got %T", v)
+	}
+}
+
+func TestApp_FocusTabKey(t *testing.T) {
+	app := newTestApp()
+	model, _ := app.Update(keyMsg('f'))
+	a := model.(App)
+	if a.activeTab != TabFocus {
+		t.Errorf("expected TabFocus, got %d", a.activeTab)
+	}
+}
+
+func TestApp_Update_IssuesLoadedMsg_SetsDataOnFocusView(t *testing.T) {
+	app := newTestApp()
+	issues := []datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	}
+	model, _ := app.Update(IssuesLoadedMsg{Issues: issues})
+	a := model.(App)
+	fv := a.views[TabFocus].(*FocusView)
+	if fv.dag == nil {
+		t.Error("expected DAG to be built on FocusView")
+	}
+}
+
+func TestApp_Update_ReadyLoadedMsg_SetsDataOnFocusView(t *testing.T) {
+	app := newTestApp()
+	// First load issues so DAG exists
+	issues := []datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	}
+	model, _ := app.Update(IssuesLoadedMsg{Issues: issues})
+	a := model.(App)
+	// Now load ready
+	ready := []datasource.Issue{{ID: "a"}}
+	model, _ = a.Update(ReadyLoadedMsg{Issues: ready})
+	a = model.(App)
+	fv := a.views[TabFocus].(*FocusView)
+	if len(fv.items) == 0 {
+		t.Error("expected focus items to be populated after ReadyLoadedMsg")
+	}
+}
+
+func TestApp_EnterOnFocus_NavigatesToDetail(t *testing.T) {
+	detail := &datasource.IssueDetail{ID: "a", Title: "Fix auth"}
+	ds := &mockDataSource{detail: detail}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabFocus
+	fv := app.views[TabFocus].(*FocusView)
+	fv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "Fix auth"},
+		{ID: "b", Status: "open", Priority: 1, Title: "Deploy", Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "a"}})
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabDetail {
+		t.Errorf("expected TabDetail, got %d", a.activeTab)
+	}
+	if cmd == nil {
+		t.Fatal("expected fetch command")
+	}
+}
+
+func TestApp_EnterOnFocus_NoSelection_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabFocus
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabFocus {
+		t.Error("expected to stay on Focus tab when no selection")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd when no selection")
+	}
+}
+
+func TestApp_EnterOnFocus_NonFocusView_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabFocus
+	app.views[TabFocus] = &stubView{}
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabFocus {
+		t.Error("expected to stay on Focus tab")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd")
+	}
+}
+
+func TestApp_FocusTabInTabBar(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabFocus
+	out := app.View()
+	if !strings.Contains(out, "Focus") {
+		t.Error("tab bar should contain Focus tab name")
+	}
+}
+
+func TestApp_HelpShowsFocusKey(t *testing.T) {
+	app := newTestApp()
+	app.showHelp = true
+	out := app.View()
+	if !strings.Contains(out, "Focus") {
+		t.Errorf("help should mention Focus, got:\n%s", out)
 	}
 }

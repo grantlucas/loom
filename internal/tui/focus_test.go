@@ -337,6 +337,169 @@ func TestFocusView_RenderItemLine_MissingIssue(t *testing.T) {
 	}
 }
 
+func TestFocusView_SortByDepth(t *testing.T) {
+	fv := NewFocusView()
+	fv.SetIssues([]datasource.Issue{
+		{ID: "shallow", Status: "open", Priority: 1, Title: "Shallow"},
+		{ID: "s-child", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "s-child", DependsOnID: "shallow"},
+		}},
+		{ID: "deep", Status: "open", Priority: 1, Title: "Deep"},
+		{ID: "d1", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "d1", DependsOnID: "deep"},
+		}},
+		{ID: "d2", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "d2", DependsOnID: "d1"},
+		}},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "shallow"}, {ID: "deep"}})
+	// Cycle to depth sort (impact -> priority -> depth)
+	fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	if fv.sortMode != focusSortByDepth {
+		t.Fatalf("expected depth sort, got %d", fv.sortMode)
+	}
+	if fv.items[0].NodeID != "deep" {
+		t.Errorf("depth sort should put deeper chain first, got %q", fv.items[0].NodeID)
+	}
+}
+
+func TestFocusView_SortByUnblock(t *testing.T) {
+	fv := NewFocusView()
+	fv.SetIssues([]datasource.Issue{
+		{ID: "few", Status: "open", Priority: 1, Title: "Few"},
+		{ID: "f1", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "f1", DependsOnID: "few"},
+		}},
+		{ID: "many", Status: "open", Priority: 1, Title: "Many"},
+		{ID: "m1", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "m1", DependsOnID: "many"},
+		}},
+		{ID: "m2", Status: "open", Priority: 1, Dependencies: []datasource.RawDependency{
+			{IssueID: "m2", DependsOnID: "many"},
+		}},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "few"}, {ID: "many"}})
+	// Cycle to unblock sort (impact -> priority -> depth -> unblock)
+	for i := 0; i < 3; i++ {
+		fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	}
+	if fv.sortMode != focusSortByUnblock {
+		t.Fatalf("expected unblock sort, got %d", fv.sortMode)
+	}
+	if fv.items[0].NodeID != "many" {
+		t.Errorf("unblock sort should put most-unblocking first, got %q", fv.items[0].NodeID)
+	}
+}
+
+func TestFocusView_RenderDownstreamLine_MissingIssue(t *testing.T) {
+	fv := NewFocusView()
+	fv.issues = make(map[string]datasource.Issue)
+	fv.items = []graph.Impact{{NodeID: "a", Downstream: []string{"ghost"}, UnblockCount: 1}}
+	out := fv.View()
+	if !strings.Contains(out, "ghost") {
+		t.Error("should render unknown downstream ID")
+	}
+}
+
+func TestFocusView_CollapsedTotalLines(t *testing.T) {
+	fv := newFocusViewPopulated()
+	fv.expanded = false
+	total := fv.totalLines()
+	if total != len(fv.items) {
+		t.Errorf("collapsed totalLines should equal item count, got %d vs %d", total, len(fv.items))
+	}
+}
+
+func TestFocusView_SortByPriority_TiebreakByImpact(t *testing.T) {
+	fv := NewFocusView()
+	fv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "A"},
+		{ID: "a1", Status: "open", Priority: 0, Dependencies: []datasource.RawDependency{
+			{IssueID: "a1", DependsOnID: "a"},
+		}},
+		{ID: "b", Status: "open", Priority: 1, Title: "B"},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "a"}, {ID: "b"}})
+	fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}) // priority sort
+	// Same own priority (1), tiebreak by priSum (a has sum=4, b has sum=0)
+	if fv.items[0].NodeID != "a" {
+		t.Errorf("priority sort tiebreak by impact should put 'a' first, got %q", fv.items[0].NodeID)
+	}
+}
+
+func TestFocusView_SortByDepth_TiebreakByImpact(t *testing.T) {
+	fv := NewFocusView()
+	fv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "A"},
+		{ID: "a1", Status: "open", Priority: 0, Dependencies: []datasource.RawDependency{
+			{IssueID: "a1", DependsOnID: "a"},
+		}},
+		{ID: "b", Status: "open", Priority: 1, Title: "B"},
+		{ID: "b1", Status: "open", Priority: 3, Dependencies: []datasource.RawDependency{
+			{IssueID: "b1", DependsOnID: "b"},
+		}},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "a"}, {ID: "b"}})
+	// Switch to depth sort
+	fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	// Same depth (1), tiebreak by priSum (a=4, b=1)
+	if fv.items[0].NodeID != "a" {
+		t.Errorf("depth sort tiebreak should put 'a' first (higher priSum), got %q", fv.items[0].NodeID)
+	}
+}
+
+func TestFocusView_SortByUnblock_TiebreakByImpact(t *testing.T) {
+	fv := NewFocusView()
+	fv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "A"},
+		{ID: "a1", Status: "open", Priority: 0, Dependencies: []datasource.RawDependency{
+			{IssueID: "a1", DependsOnID: "a"},
+		}},
+		{ID: "b", Status: "open", Priority: 1, Title: "B"},
+		{ID: "b1", Status: "open", Priority: 3, Dependencies: []datasource.RawDependency{
+			{IssueID: "b1", DependsOnID: "b"},
+		}},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "a"}, {ID: "b"}})
+	// Switch to unblock sort
+	for i := 0; i < 3; i++ {
+		fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	}
+	// Same unblock (1), tiebreak by priSum (a=4, b=1)
+	if fv.items[0].NodeID != "a" {
+		t.Errorf("unblock sort tiebreak should put 'a' first, got %q", fv.items[0].NodeID)
+	}
+}
+
+func TestFocusView_SingleReadyIssueWord(t *testing.T) {
+	fv := NewFocusView()
+	fv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "Only one"},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "a"}})
+	out := fv.View()
+	if !strings.Contains(out, "1 ready issue,") {
+		t.Errorf("should use singular 'issue' for count of 1, got:\n%s", out)
+	}
+}
+
+func TestFocusView_DownstreamLongTitleTruncated(t *testing.T) {
+	fv := NewFocusView()
+	fv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1, Title: "Parent"},
+		{ID: "b", Status: "open", Priority: 1, Title: "This downstream title is very long and should definitely be truncated at some point", Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "a"}})
+	out := fv.View()
+	if !strings.Contains(out, "...") {
+		t.Error("long downstream title should be truncated")
+	}
+}
+
 // --- Helper ---
 
 func newFocusViewPopulated() *FocusView {

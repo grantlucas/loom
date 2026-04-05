@@ -20,6 +20,7 @@ const (
 	TabDetail
 	TabTree
 	TabCriticalPath
+	TabFocus
 )
 
 var tabNames = [...]string{
@@ -28,9 +29,10 @@ var tabNames = [...]string{
 	TabDetail:       "Detail",
 	TabTree:         "Tree",
 	TabCriticalPath: "Critical Path",
+	TabFocus:        "Focus",
 }
 
-var allTabs = []Tab{TabDashboard, TabIssues, TabDetail, TabTree, TabCriticalPath}
+var allTabs = []Tab{TabDashboard, TabIssues, TabDetail, TabTree, TabCriticalPath, TabFocus}
 
 // String returns the display name for a tab.
 func (t Tab) String() string {
@@ -69,6 +71,7 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		TabDetail:       NewDetailView(),
 		TabTree:         NewTreeView(),
 		TabCriticalPath: NewCriticalPathView(),
+		TabFocus:        NewFocusView(),
 	}
 	ti := textinput.New()
 	ti.Placeholder = "issue ID"
@@ -142,11 +145,17 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cpv, ok := a.views[TabCriticalPath].(*CriticalPathView); ok {
 			cpv.SetIssues(msg.Issues)
 		}
+		if fv, ok := a.views[TabFocus].(*FocusView); ok {
+			fv.SetIssues(msg.Issues)
+		}
 		return a, nil
 
 	case ReadyLoadedMsg:
 		if dv, ok := a.views[TabDashboard].(*DashboardView); ok {
 			dv.SetReady(msg.Issues)
+		}
+		if fv, ok := a.views[TabFocus].(*FocusView); ok {
+			fv.SetReady(msg.Issues)
 		}
 		return a, nil
 
@@ -222,6 +231,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.CriticalPath):
 			a.activeTab = TabCriticalPath
 			return a, nil
+		case key.Matches(msg, a.keys.Focus):
+			a.activeTab = TabFocus
+			return a, nil
 		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabIssues:
 			if lv, ok := a.views[TabIssues].(*ListView); ok {
 				id := lv.SelectedIssueID()
@@ -253,6 +265,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabCriticalPath:
 			if cpv, ok := a.views[TabCriticalPath].(*CriticalPathView); ok {
 				id := cpv.SelectedNodeID()
+				if id == "" {
+					return a, nil
+				}
+				a.history = nil
+				a.activeTab = TabDetail
+				if dv, ok := a.views[TabDetail].(*DetailView); ok {
+					dv.SetLoading()
+				}
+				return a, a.fetchIssueDetail(id)
+			}
+			return a, nil
+		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabFocus:
+			if fv, ok := a.views[TabFocus].(*FocusView); ok {
+				id := fv.SelectedNodeID()
 				if id == "" {
 					return a, nil
 				}
@@ -357,6 +383,7 @@ func (a App) renderHelp() string {
 		{"i", "Issues"},
 		{"t", "Tree"},
 		{"c", "Critical Path"},
+		{"f", "Focus"},
 		{"enter", "Open detail"},
 		{"esc", "Back"},
 		{"g", "goto issue"},

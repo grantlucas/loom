@@ -8,6 +8,7 @@ type KeyMap struct {
 	Issues       key.Binding
 	Tree         key.Binding
 	CriticalPath key.Binding
+	Focus        key.Binding
 	Refresh      key.Binding
 	Watch        key.Binding
 	Help         key.Binding
@@ -35,6 +36,10 @@ func DefaultKeyMap() KeyMap {
 		CriticalPath: key.NewBinding(
 			key.WithKeys("c"),
 			key.WithHelp("c", "critical path"),
+		),
+		Focus: key.NewBinding(
+			key.WithKeys("f"),
+			key.WithHelp("f", "focus"),
 		),
 		Refresh: key.NewBinding(
 			key.WithKeys("r"),
