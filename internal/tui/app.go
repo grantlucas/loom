@@ -171,6 +171,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case ErrMsg:
+		a.loading = false
 		a.err = msg.Err
 		return a, nil
 
@@ -377,6 +378,8 @@ func (a App) View() string {
 		b.WriteString("\n")
 	} else if a.loading {
 		b.WriteString("  Loading...")
+	} else if a.err != nil {
+		b.WriteString(errStyle.Render("  Error: " + a.err.Error()))
 	} else {
 		if a.activeTab == TabDetail {
 			b.WriteString(a.renderBreadcrumb())

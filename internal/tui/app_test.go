@@ -444,6 +444,25 @@ func TestApp_Update_IssuesLoadedMsg_ClearsError(t *testing.T) {
 	}
 }
 
+func TestApp_Update_ErrMsg_ClearsLoading(t *testing.T) {
+	app := newTestApp()
+	model, _ := app.Update(ErrMsg{Err: errors.New("fail")})
+	a := model.(App)
+	if a.loading {
+		t.Error("expected loading to be cleared after ErrMsg")
+	}
+}
+
+func TestApp_View_ShowsErrorWhenSet(t *testing.T) {
+	app := newTestApp()
+	app.loading = false
+	app.err = errors.New("connection refused")
+	view := app.View()
+	if !strings.Contains(view, "connection refused") {
+		t.Errorf("expected view to show error message, got:\n%s", view)
+	}
+}
+
 func TestApp_Update_ErrMsg_SetsError(t *testing.T) {
 	app := newTestApp()
 	model, cmd := app.Update(ErrMsg{Err: errors.New("fetch failed")})

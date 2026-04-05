@@ -61,6 +61,10 @@ var (
 	dashboardBarStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("205"))
 
+	// Error message
+	errStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("196"))
+
 	// Filter prompt
 	filterPromptStyle = lipgloss.NewStyle().
 				Bold(true)
