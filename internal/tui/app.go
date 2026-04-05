@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grantlucas/loom/internal/datasource"
@@ -56,6 +57,8 @@ type App struct {
 	interval  time.Duration
 	err       error
 	history   []string
+	gotoMode  bool
+	gotoInput textinput.Model
 }
 
 // NewApp creates a new App wired to the given DataSource.
@@ -64,6 +67,9 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		TabIssues: NewListView(),
 		TabDetail: NewDetailView(),
 	}
+	ti := textinput.New()
+	ti.Placeholder = "issue ID"
+	ti.CharLimit = 30
 	return App{
 		activeTab: TabDashboard,
 		views:     views,
@@ -71,6 +77,7 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		ds:        ds,
 		interval:  interval,
 		watchMode: watch,
+		gotoInput: ti,
 	}
 }
 
@@ -141,6 +148,38 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
+		if a.gotoMode {
+			switch msg.Type {
+			case tea.KeyEnter:
+				id := strings.TrimSpace(a.gotoInput.Value())
+				a.gotoMode = false
+				a.gotoInput.Blur()
+				if id == "" {
+					return a, nil
+				}
+				if a.activeTab == TabDetail {
+					if dv, ok := a.views[TabDetail].(*DetailView); ok && dv.detail != nil {
+						a.history = append(a.history, dv.detail.ID)
+					}
+				} else {
+					a.history = nil
+				}
+				a.activeTab = TabDetail
+				if dv, ok := a.views[TabDetail].(*DetailView); ok {
+					dv.SetLoading()
+				}
+				return a, a.fetchIssueDetail(id)
+			case tea.KeyEscape:
+				a.gotoMode = false
+				a.gotoInput.Blur()
+				return a, nil
+			default:
+				var cmd tea.Cmd
+				a.gotoInput, cmd = a.gotoInput.Update(msg)
+				return a, cmd
+			}
+		}
+
 		switch {
 		case key.Matches(msg, a.keys.Dashboard):
 			a.activeTab = TabDashboard
@@ -208,6 +247,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		case key.Matches(msg, a.keys.Quit):
 			return a, tea.Quit
+		case key.Matches(msg, a.keys.Goto):
+			a.gotoMode = true
+			a.gotoInput.Reset()
+			a.gotoInput.Focus()
+			return a, nil
 		}
 	}
 
@@ -225,6 +269,9 @@ func (a App) View() string {
 	b.WriteString("\n")
 	if a.showHelp {
 		b.WriteString(a.renderHelp())
+		b.WriteString("\n")
+	} else if a.gotoMode {
+		b.WriteString(gotoPromptStyle.Render("Go to: ") + a.gotoInput.View())
 		b.WriteString("\n")
 	} else {
 		if a.activeTab == TabDetail {
@@ -255,6 +302,7 @@ func (a App) renderHelp() string {
 		{"c", "Critical Path"},
 		{"enter", "Open detail"},
 		{"esc", "Back"},
+		{"g", "goto issue"},
 		{"r", "Refresh"},
 		{"w", "Toggle watch mode"},
 		{"?", "Toggle help"},
