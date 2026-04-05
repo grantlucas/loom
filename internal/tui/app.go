@@ -374,6 +374,8 @@ func (a App) View() string {
 	} else if a.gotoMode {
 		b.WriteString(gotoPromptStyle.Render("Go to: ") + a.gotoInput.View())
 		b.WriteString("\n")
+	} else if a.loading {
+		b.WriteString("  Loading...")
 	} else {
 		if a.activeTab == TabDetail {
 			b.WriteString(a.renderBreadcrumb())

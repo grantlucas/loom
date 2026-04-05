@@ -225,6 +225,15 @@ func TestApp_QuitKey(t *testing.T) {
 	}
 }
 
+func TestApp_View_ShowsLoadingWhenLoading(t *testing.T) {
+	app := newTestApp()
+	// app starts with loading=true
+	view := app.View()
+	if !strings.Contains(view, "Loading") {
+		t.Errorf("expected view to contain 'Loading' while loading, got:\n%s", view)
+	}
+}
+
 func TestApp_ViewRendersTabBar(t *testing.T) {
 	app := newTestApp()
 	view := app.View()
@@ -354,6 +363,7 @@ func (v *stubView) Resize(width, height int) {}
 
 func TestApp_ViewDelegatesToActiveView(t *testing.T) {
 	app := newTestApp()
+	app.loading = false
 	stub := &stubView{content: "dashboard content here"}
 	app.views[TabDashboard] = stub
 
@@ -378,6 +388,7 @@ func TestApp_UpdateDelegatesToActiveView(t *testing.T) {
 
 func TestApp_ViewSwitchingChangesDelegate(t *testing.T) {
 	app := newTestApp()
+	app.loading = false
 	dashStub := &stubView{content: "dash"}
 	issueStub := &stubView{content: "issues"}
 	app.views[TabDashboard] = dashStub
@@ -1008,6 +1019,7 @@ func TestApp_MultiStepNavigation(t *testing.T) {
 
 func TestApp_RenderBreadcrumb_OnDetailWithHistory(t *testing.T) {
 	app := newTestApp()
+	app.loading = false
 	app.activeTab = TabDetail
 	app.history = []string{"a-1", "b-1"}
 	dv := app.views[TabDetail].(*DetailView)
