@@ -36,9 +36,6 @@ func (t Tab) String() string {
 	return "Unknown"
 }
 
-// RefreshMsg signals that data should be re-fetched from bd.
-type RefreshMsg struct{}
-
 // View is the interface that each tab's view must implement.
 type View interface {
 	Update(msg tea.Msg) tea.Cmd
