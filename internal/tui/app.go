@@ -88,7 +88,11 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 }
 
 func (a App) Init() tea.Cmd {
-	return tea.Batch(a.fetchIssues(), a.fetchReady())
+	cmds := []tea.Cmd{a.fetchIssues(), a.fetchReady()}
+	if a.watchMode {
+		cmds = append(cmds, a.scheduleTick())
+	}
+	return tea.Batch(cmds...)
 }
 
 func tickMsg(t time.Time) tea.Msg {

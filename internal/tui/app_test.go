@@ -113,6 +113,60 @@ func TestApp_Init_FetchError_ReturnsErrMsg(t *testing.T) {
 	// Init returns a batched command; individual fetch errors are tested via fetchIssues directly
 }
 
+func TestApp_Init_WatchMode_SchedulesTick(t *testing.T) {
+	ds := &mockDataSource{issues: []datasource.Issue{{ID: "x-1"}}}
+	app := NewApp(ds, 5*time.Second, true)
+	cmd := app.Init()
+	if cmd == nil {
+		t.Fatal("expected Init() to return a command")
+	}
+	// Execute the batch to get sub-commands
+	msg := cmd()
+	batch, ok := msg.(tea.BatchMsg)
+	if !ok {
+		t.Fatal("expected Init() to return a BatchMsg")
+	}
+	// One of the sub-commands should produce a TickMsg
+	var foundTick bool
+	for _, sub := range batch {
+		if sub == nil {
+			continue
+		}
+		result := sub()
+		if _, ok := result.(TickMsg); ok {
+			foundTick = true
+			break
+		}
+	}
+	if !foundTick {
+		t.Error("expected Init() to schedule a tick when watch mode is enabled")
+	}
+}
+
+func TestApp_Init_NoWatch_NoTick(t *testing.T) {
+	ds := &mockDataSource{issues: []datasource.Issue{{ID: "x-1"}}}
+	app := NewApp(ds, 5*time.Second, false)
+	cmd := app.Init()
+	if cmd == nil {
+		t.Fatal("expected Init() to return a command")
+	}
+	msg := cmd()
+	batch, ok := msg.(tea.BatchMsg)
+	if !ok {
+		// Single command, not a batch — that's fine, no tick
+		return
+	}
+	for _, sub := range batch {
+		if sub == nil {
+			continue
+		}
+		result := sub()
+		if _, ok := result.(TickMsg); ok {
+			t.Error("expected Init() NOT to schedule a tick when watch mode is disabled")
+		}
+	}
+}
+
 func TestNewApp_ImplementsTeaModel(t *testing.T) {
 	var _ tea.Model = newTestApp()
 }
