@@ -500,6 +500,14 @@ type errForTest string
 
 func (e errForTest) Error() string { return string(e) }
 
+func TestDetailView_Resize_VerySmallHeight_ClampsToOne(t *testing.T) {
+	dv := NewDetailView()
+	dv.Resize(80, 2) // height - 3 = -1, should clamp to 1
+	if dv.viewport.Height != 1 {
+		t.Errorf("expected viewport height 1 for tiny terminal, got %d", dv.viewport.Height)
+	}
+}
+
 func TestDetailView_Resize_SetsViewportDimensions(t *testing.T) {
 	dv := NewDetailView()
 	dv.Resize(100, 40)

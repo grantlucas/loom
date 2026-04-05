@@ -391,6 +391,14 @@ func newCriticalViewWithChain() *CriticalPathView {
 	return cv
 }
 
+func TestCriticalPathView_Resize_VeryNarrow_ClampsTitleWidth(t *testing.T) {
+	cv := NewCriticalPathView()
+	cv.Resize(20, 30)
+	if cv.titleMaxWidth() < 10 {
+		t.Errorf("expected titleMaxWidth >= 10, got %d", cv.titleMaxWidth())
+	}
+}
+
 func TestCriticalPathView_Resize_AdaptsTitleTruncation(t *testing.T) {
 	cv := NewCriticalPathView()
 	longTitle := "This is a very long title that should be truncated differently at different widths"

@@ -1685,21 +1685,36 @@ func TestApp_HelpOverlay_ContainsSectionHeaders(t *testing.T) {
 	}
 }
 
+func TestApp_HelpOverlay_DashboardHasNoViewSpecificSection(t *testing.T) {
+	app := newTestApp()
+	app.showHelp = true
+	app.activeTab = TabDashboard
+	output := app.View()
+	// Dashboard has no extra bindings, so no Dashboard section header should appear
+	if strings.Contains(output, "── Dashboard") {
+		t.Error("Dashboard tab should not have a view-specific help section")
+	}
+}
+
 func TestApp_HelpOverlay_ShowsViewSpecificHelp(t *testing.T) {
 	app := newTestApp()
 	app.showHelp = true
 
-	// On Issues tab, should show sort and filter help
-	app.activeTab = TabIssues
-	output := app.View()
-	if !strings.Contains(output, "sort") {
-		t.Error("help on Issues tab should mention sort")
+	tests := []struct {
+		tab  Tab
+		want string
+	}{
+		{TabIssues, "sort"},
+		{TabTree, "expand"},
+		{TabCriticalPath, "length"},
+		{TabFocus, "Toggle expand"},
+		{TabDetail, "relations"},
 	}
-
-	// On Tree tab, should show expand/collapse help
-	app.activeTab = TabTree
-	output = app.View()
-	if !strings.Contains(output, "expand") {
-		t.Error("help on Tree tab should mention expand")
+	for _, tt := range tests {
+		app.activeTab = tt.tab
+		output := app.View()
+		if !strings.Contains(output, tt.want) {
+			t.Errorf("help on %s tab should contain %q", tt.tab, tt.want)
+		}
 	}
 }

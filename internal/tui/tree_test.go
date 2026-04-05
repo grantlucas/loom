@@ -349,6 +349,14 @@ func newTreeViewWithIssues() *TreeView {
 	return tv
 }
 
+func TestTreeView_Resize_VeryNarrow_ClampsTitleWidth(t *testing.T) {
+	tv := NewTreeView()
+	tv.Resize(20, 30)
+	if tv.titleMaxWidth() < 10 {
+		t.Errorf("expected titleMaxWidth >= 10, got %d", tv.titleMaxWidth())
+	}
+}
+
 func TestTreeView_Resize_AdaptsTitleTruncation(t *testing.T) {
 	tv := NewTreeView()
 	longTitle := "This is a very long title that should be truncated differently at different widths"

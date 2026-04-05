@@ -530,6 +530,17 @@ func newFocusViewPopulated() *FocusView {
 	return fv
 }
 
+func TestFocusView_Resize_VeryNarrow_ClampsTitleWidth(t *testing.T) {
+	fv := NewFocusView()
+	fv.Resize(20, 30)
+	if fv.titleMaxWidth() < 10 {
+		t.Errorf("expected titleMaxWidth >= 10, got %d", fv.titleMaxWidth())
+	}
+	if fv.downstreamTitleMaxWidth() < 10 {
+		t.Errorf("expected downstreamTitleMaxWidth >= 10, got %d", fv.downstreamTitleMaxWidth())
+	}
+}
+
 func TestFocusView_Resize_AdaptsTitleTruncation(t *testing.T) {
 	fv := NewFocusView()
 	longTitle := "This is a very long title that should be truncated differently at different widths"

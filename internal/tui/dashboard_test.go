@@ -426,6 +426,22 @@ func TestDashboardView_UsesStyledPriorityInReadyQueue(t *testing.T) {
 	}
 }
 
+func TestDashboardView_Resize_VeryNarrow_ClampsBarWidth(t *testing.T) {
+	dv := NewDashboardView()
+	dv.Resize(10, 30)
+	if dv.barMaxWidth < 10 {
+		t.Errorf("expected barMaxWidth >= 10 for narrow terminal, got %d", dv.barMaxWidth)
+	}
+}
+
+func TestDashboardView_Resize_VeryWide_ClampsBarWidth(t *testing.T) {
+	dv := NewDashboardView()
+	dv.Resize(300, 30)
+	if dv.barMaxWidth > 80 {
+		t.Errorf("expected barMaxWidth <= 80 for very wide terminal, got %d", dv.barMaxWidth)
+	}
+}
+
 func TestDashboardView_Resize_BarWidthScalesWithTerminal(t *testing.T) {
 	dv := NewDashboardView()
 	dv.SetIssues([]datasource.Issue{
