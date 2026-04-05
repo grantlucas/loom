@@ -1658,3 +1658,48 @@ func TestApp_WindowSizeMsg_PropagatesResizeToActiveView(t *testing.T) {
 		t.Error("expected ListView to have non-zero width after WindowSizeMsg")
 	}
 }
+
+func TestApp_HelpOverlay_ContainsGlobalAndNavigationSections(t *testing.T) {
+	app := newTestApp()
+	app.showHelp = true
+	output := app.View()
+
+	requiredKeys := []string{"d", "i", "t", "c", "f", "enter", "esc", "g", "/", "r", "w", "?", "q"}
+	for _, k := range requiredKeys {
+		if !strings.Contains(output, k) {
+			t.Errorf("help overlay should contain key %q", k)
+		}
+	}
+}
+
+func TestApp_HelpOverlay_ContainsSectionHeaders(t *testing.T) {
+	app := newTestApp()
+	app.showHelp = true
+	output := app.View()
+
+	sections := []string{"Navigation", "General"}
+	for _, s := range sections {
+		if !strings.Contains(output, s) {
+			t.Errorf("help overlay should contain section header %q", s)
+		}
+	}
+}
+
+func TestApp_HelpOverlay_ShowsViewSpecificHelp(t *testing.T) {
+	app := newTestApp()
+	app.showHelp = true
+
+	// On Issues tab, should show sort and filter help
+	app.activeTab = TabIssues
+	output := app.View()
+	if !strings.Contains(output, "sort") {
+		t.Error("help on Issues tab should mention sort")
+	}
+
+	// On Tree tab, should show expand/collapse help
+	app.activeTab = TabTree
+	output = app.View()
+	if !strings.Contains(output, "expand") {
+		t.Error("help on Tree tab should mention expand")
+	}
+}

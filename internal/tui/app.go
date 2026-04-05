@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -393,7 +394,22 @@ func (a App) renderBreadcrumb() string {
 }
 
 func (a App) renderHelp() string {
-	help := []struct{ key, desc string }{
+	type entry struct{ key, desc string }
+
+	renderSection := func(title string, entries []entry) string {
+		var sb strings.Builder
+		sb.WriteString(detailSectionStyle.Render("── "+title+" ──"))
+		sb.WriteString("\n")
+		for _, e := range entries {
+			sb.WriteString(fmt.Sprintf("  %-10s %s\n", e.key, e.desc))
+		}
+		return sb.String()
+	}
+
+	var b strings.Builder
+
+	// Navigation section
+	b.WriteString(renderSection("Navigation", []entry{
 		{"d", "Dashboard"},
 		{"i", "Issues"},
 		{"t", "Tree"},
@@ -402,17 +418,56 @@ func (a App) renderHelp() string {
 		{"enter", "Open detail"},
 		{"esc", "Back"},
 		{"g", "goto issue"},
-		{"/", "filter (issues)"},
-		{"r", "Refresh"},
+	}))
+	b.WriteString("\n")
+
+	// General section
+	b.WriteString(renderSection("General", []entry{
+		{"/", "filter (issues view)"},
+		{"r", "Refresh data"},
 		{"w", "Toggle watch mode"},
 		{"?", "Toggle help"},
 		{"q", "Quit"},
+	}))
+
+	// View-specific section
+	var viewEntries []entry
+	switch a.activeTab {
+	case TabIssues:
+		viewEntries = []entry{
+			{"s", "Cycle sort column"},
+			{"/", "Filter issues"},
+		}
+	case TabTree:
+		viewEntries = []entry{
+			{"j/k", "Move cursor"},
+			{"e", "expand node"},
+			{"c", "Collapse node"},
+		}
+	case TabCriticalPath:
+		viewEntries = []entry{
+			{"j/k", "Move cursor"},
+			{"l", "Sort by length"},
+			{"p", "Sort by priority"},
+		}
+	case TabFocus:
+		viewEntries = []entry{
+			{"j/k", "Move cursor"},
+			{"s", "Cycle sort mode"},
+			{"e", "Toggle expand"},
+		}
+	case TabDetail:
+		viewEntries = []entry{
+			{"j/k", "Navigate relations"},
+		}
 	}
-	var lines []string
-	for _, h := range help {
-		lines = append(lines, "  "+h.key+"  "+h.desc)
+
+	if len(viewEntries) > 0 {
+		b.WriteString("\n")
+		b.WriteString(renderSection(a.activeTab.String(), viewEntries))
 	}
-	return strings.Join(lines, "\n")
+
+	return b.String()
 }
 
 func (a App) renderTabBar() string {
