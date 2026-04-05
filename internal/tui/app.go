@@ -142,6 +142,7 @@ func (a App) fetchIssueDetail(id string) tea.Cmd {
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case IssuesLoadedMsg:
+		a.loading = false
 		a.err = nil
 		if lv, ok := a.views[TabIssues].(*ListView); ok {
 			lv.SetIssues(msg.Issues)

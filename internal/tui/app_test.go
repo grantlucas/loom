@@ -424,6 +424,16 @@ func TestApp_Update_IssuesLoadedMsg_SetsDataOnListView(t *testing.T) {
 	}
 }
 
+func TestApp_Update_IssuesLoadedMsg_ClearsLoading(t *testing.T) {
+	app := newTestApp()
+	// app starts with loading=true
+	model, _ := app.Update(IssuesLoadedMsg{Issues: []datasource.Issue{{ID: "x"}}})
+	a := model.(App)
+	if a.loading {
+		t.Error("expected loading to be cleared after IssuesLoadedMsg")
+	}
+}
+
 func TestApp_Update_IssuesLoadedMsg_ClearsError(t *testing.T) {
 	app := newTestApp()
 	app.err = errors.New("old error")
