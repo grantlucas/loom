@@ -529,3 +529,26 @@ func newFocusViewPopulated() *FocusView {
 	})
 	return fv
 }
+
+func TestFocusView_Resize_AdaptsTitleTruncation(t *testing.T) {
+	fv := NewFocusView()
+	longTitle := "This is a very long title that should be truncated differently at different widths"
+	fv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 0, Title: longTitle, IssueType: "task"},
+		{ID: "b", Status: "open", Priority: 1, Title: "Short", IssueType: "task", Dependencies: []datasource.RawDependency{
+			{IssueID: "b", DependsOnID: "a"},
+		}},
+	})
+	fv.SetReady([]datasource.Issue{{ID: "a"}})
+
+	fv.Resize(60, 30)
+	out60 := fv.View()
+
+	fv.Resize(120, 30)
+	out120 := fv.View()
+
+	if len(out120) <= len(out60) {
+		t.Errorf("expected wider terminal to show more title text: len at 120w=%d, len at 60w=%d",
+			len(out120), len(out60))
+	}
+}

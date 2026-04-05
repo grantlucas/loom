@@ -30,6 +30,7 @@ type FocusView struct {
 	cursor   int
 	sortMode focusSortMode
 	expanded bool
+	width    int
 
 	sortKey key.Binding
 	expKey  key.Binding
@@ -133,7 +134,33 @@ func (fv *FocusView) SelectedNodeID() string {
 }
 
 // Resize adapts the focus layout to the given terminal dimensions.
-func (fv *FocusView) Resize(width, height int) {}
+func (fv *FocusView) Resize(width, height int) {
+	fv.width = width
+}
+
+func (fv *FocusView) titleMaxWidth() int {
+	if fv.width <= 0 {
+		return 40
+	}
+	// Subtract space for rank (4), ID (15), priority bracket (5), type (~8), spacing
+	maxW := fv.width - 35
+	if maxW < 10 {
+		maxW = 10
+	}
+	return maxW
+}
+
+func (fv *FocusView) downstreamTitleMaxWidth() int {
+	if fv.width <= 0 {
+		return 35
+	}
+	// Subtract space for prefix (8), ID (15), priority bracket (5), spacing
+	maxW := fv.width - 30
+	if maxW < 10 {
+		maxW = 10
+	}
+	return maxW
+}
 
 // Update handles key messages.
 func (fv *FocusView) Update(msg tea.Msg) tea.Cmd {
@@ -224,8 +251,9 @@ func (fv *FocusView) renderItemLine(rank int, item graph.Impact) string {
 		return fmt.Sprintf("  %d. %s  (unknown)", rank+1, item.NodeID)
 	}
 	title := issue.Title
-	if len(title) > 40 {
-		title = title[:37] + "..."
+	maxW := fv.titleMaxWidth()
+	if len(title) > maxW {
+		title = title[:maxW-3] + "..."
 	}
 	if item.UnblockCount == 0 {
 		return fmt.Sprintf("  %d. %-14s [P%d] %s  %s\n     Impact: leaf — unblocks nothing",
@@ -246,8 +274,9 @@ func (fv *FocusView) renderDownstreamLine(id string, isLast bool) string {
 		return prefix + id
 	}
 	title := issue.Title
-	if len(title) > 35 {
-		title = title[:32] + "..."
+	maxW := fv.downstreamTitleMaxWidth()
+	if len(title) > maxW {
+		title = title[:maxW-3] + "..."
 	}
 	return fmt.Sprintf("%s%-14s [P%d] %s", prefix, issue.ID, issue.Priority, title)
 }

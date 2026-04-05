@@ -29,6 +29,7 @@ type TreeView struct {
 	collapsed map[string]bool
 	cursor    int
 	rootID    string // empty = forest mode
+	width     int
 	upKey     key.Binding
 	downKey   key.Binding
 	expandKey key.Binding
@@ -97,7 +98,21 @@ func (tv *TreeView) SelectedNodeID() string {
 }
 
 // Resize adapts the tree layout to the given terminal dimensions.
-func (tv *TreeView) Resize(width, height int) {}
+func (tv *TreeView) Resize(width, height int) {
+	tv.width = width
+}
+
+func (tv *TreeView) titleMaxWidth() int {
+	if tv.width <= 0 {
+		return 40
+	}
+	// Subtract space for prefix (~10), collapse char (2), indicator (2), ID (15), priority (4)
+	maxW := tv.width - 33
+	if maxW < 10 {
+		maxW = 10
+	}
+	return maxW
+}
 
 // Update handles key messages.
 func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
@@ -188,8 +203,9 @@ func (tv *TreeView) renderLine(node flatNode) string {
 		}
 	}
 	title := issue.Title
-	if len(title) > 40 {
-		title = title[:37] + "..."
+	maxW := tv.titleMaxWidth()
+	if len(title) > maxW {
+		title = title[:maxW-3] + "..."
 	}
 	return fmt.Sprintf("%s%s %s %-14s P%d  %s", node.prefix, collapse, indicator, issue.ID, issue.Priority, title)
 }

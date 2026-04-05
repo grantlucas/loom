@@ -348,3 +348,23 @@ func newTreeViewWithIssues() *TreeView {
 	})
 	return tv
 }
+
+func TestTreeView_Resize_AdaptsTitleTruncation(t *testing.T) {
+	tv := NewTreeView()
+	longTitle := "This is a very long title that should be truncated differently at different widths"
+	tv.SetIssues([]datasource.Issue{
+		{ID: "root-1", Status: "open", Priority: 1, Title: longTitle},
+	})
+
+	tv.Resize(60, 30)
+	out60 := tv.View()
+
+	tv.Resize(120, 30)
+	out120 := tv.View()
+
+	// Wider terminal should show more of the title
+	if len(out120) <= len(out60) {
+		t.Errorf("expected wider terminal to show more title text: len at 120w=%d, len at 60w=%d",
+			len(out120), len(out60))
+	}
+}

@@ -25,6 +25,7 @@ type CriticalPathView struct {
 	issues   map[string]datasource.Issue
 	cursor   int
 	sortMode criticalSortMode
+	width    int
 	sortKey  key.Binding
 	priKey   key.Binding
 	upKey    key.Binding
@@ -97,7 +98,21 @@ func (cv *CriticalPathView) SelectedNodeID() string {
 }
 
 // Resize adapts the critical path layout to the given terminal dimensions.
-func (cv *CriticalPathView) Resize(width, height int) {}
+func (cv *CriticalPathView) Resize(width, height int) {
+	cv.width = width
+}
+
+func (cv *CriticalPathView) titleMaxWidth() int {
+	if cv.width <= 0 {
+		return 40
+	}
+	// Subtract space for indent (2), indicator (3), ID (15), priority (4)
+	maxW := cv.width - 24
+	if maxW < 10 {
+		maxW = 10
+	}
+	return maxW
+}
 
 // Update handles key messages for cursor navigation and sort toggling.
 func (cv *CriticalPathView) Update(msg tea.Msg) tea.Cmd {
@@ -190,8 +205,9 @@ func (cv *CriticalPathView) renderNode(id string) string {
 	}
 	indicator := critStatusIndicator(issue)
 	title := issue.Title
-	if len(title) > 40 {
-		title = title[:37] + "..."
+	maxW := cv.titleMaxWidth()
+	if len(title) > maxW {
+		title = title[:maxW-3] + "..."
 	}
 	return fmt.Sprintf("  %s  %-14s P%d  %s", indicator, issue.ID, issue.Priority, title)
 }
