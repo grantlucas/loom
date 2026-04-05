@@ -112,7 +112,7 @@ No filesystem watchers, no Dolt hooks, no daemons. Just CLI calls.
 
 ## Views
 
-Loom has five views, navigable via tab bar or keyboard shortcuts.
+Loom has six views, navigable via tab bar or keyboard shortcuts.
 
 ### 1. Dashboard (`d`)
 
@@ -120,7 +120,7 @@ The landing view. At-a-glance project health.
 
 ```
 ┌─ Loom ─────────────────────────────────────────────────────┐
-│ [Dashboard]  Issues  Detail  Tree  Critical Path           │
+│ [Dashboard]  Issues  Detail  Tree  Critical  Focus         │
 ├────────────────────────────────────────────────────────────-┤
 │                                                            │
 │  Project: my-project    Issues: 47    Last refresh: 12s    │
@@ -147,7 +147,7 @@ The landing view. At-a-glance project health.
 │  Longest chain: 3 deep (bd-o5p6 → bd-k1l2 → bd-a1b2)      │
 │                                                            │
 ├────────────────────────────────────────────────────────────-┤
-│ d:dashboard  i:issues  t:tree  c:critical  r:refresh  ?:help│
+│ d:dash  i:issues  t:tree  c:crit  f:focus  r:refresh  ?:help│
 └────────────────────────────────────────────────────────────-┘
 ```
 
@@ -159,7 +159,7 @@ Filterable, sortable table of all issues.
 
 ```
 ┌─ Loom ─────────────────────────────────────────────────────┐
-│  Dashboard  [Issues]  Detail  Tree  Critical Path          │
+│  Dashboard  [Issues]  Detail  Tree  Critical  Focus        │
 ├────────────────────────────────────────────────────────────-┤
 │ Filter: status:open  Sort: priority ↑                      │
 │                                                            │
@@ -193,7 +193,7 @@ Full detail view for a single issue.
 
 ```
 ┌─ Loom ─────────────────────────────────────────────────────┐
-│  Dashboard  Issues  [Detail: bd-a1b2]  Tree  Critical Path │
+│  Dashboard  Issues  [Detail: bd-a1b2]  Tree  Critical  Focus│
 ├────────────────────────────────────────────────────────────-┤
 │                                                            │
 │  bd-a1b2: Fix auth validation                              │
@@ -232,7 +232,7 @@ ASCII-rendered dependency tree, either for a specific issue or the full project 
 
 ```
 ┌─ Loom ─────────────────────────────────────────────────────┐
-│  Dashboard  Issues  Detail  [Tree: bd-epic-auth]  Crit…    │
+│  Dashboard  Issues  Detail  [Tree: bd-epic-auth]  Crit  Focus│
 ├────────────────────────────────────────────────────────────-┤
 │                                                            │
 │  bd-epic-auth: Auth System Overhaul [P1] (open)            │
@@ -264,7 +264,7 @@ The longest chain(s) of blocking dependencies from any open leaf issue to a term
 
 ```
 ┌─ Loom ─────────────────────────────────────────────────────┐
-│  Dashboard  Issues  Detail  Tree  [Critical Path]          │
+│  Dashboard  Issues  Detail  Tree  [Critical]  Focus        │
 ├────────────────────────────────────────────────────────────-┤
 │                                                            │
 │  Longest blocking chains to completion:                    │
@@ -297,6 +297,74 @@ This is computed locally from the full issue + dependency dataset, not from a si
 
 Data sources: `bd list --json` + `bd show <id> --json` for all open issues (batched)
 
+### 6. Focus (`f`)
+
+The "what should I work on next?" view. Shows every ready issue ranked by downstream impact — how much work it unblocks and how critical that work is. This is the view that turns a flat ready queue into a prioritized decision.
+
+```
+┌─ Loom ─────────────────────────────────────────────────────────┐
+│  Dashboard  Issues  Detail  Tree  Critical  [Focus]            │
+├────────────────────────────────────────────────────────────────-┤
+│ Ready issues ranked by downstream impact                       │
+│                                                                │
+│  1. bd-a1b2  [P1] Fix auth validation              task       │
+│     Impact: unblocks 3 issues (1 P0, 1 P1, 1 P2)             │
+│     ├→ bd-k1l2 [P0] Deploy hotfix                  open       │
+│     │  └→ bd-o5p6 [P2] Release v2.1                open       │
+│     └→ bd-w1x2 [P1] Auth smoke tests               open       │
+│     Max chain depth: 3    Blocked priority sum: 5             │
+│                                                                │
+│  2. bd-c3d4  [P2] Add retry logic                  feature    │
+│     Impact: unblocks 2 issues (1 P1, 1 P3)                   │
+│     ├→ bd-m3n4 [P1] Integration tests              open       │
+│     └→ bd-q1r2 [P3] Load testing                   open       │
+│     Max chain depth: 2    Blocked priority sum: 4             │
+│                                                                │
+│  3. bd-e5f6  [P2] Update API docs                  chore      │
+│     Impact: unblocks 1 issue (1 P0)                           │
+│     └→ bd-u5v6 [P0] Public launch                  open       │
+│     Max chain depth: 2    Blocked priority sum: 2             │
+│                                                                │
+│  4. bd-g7h8  [P3] Refactor config loader            task      │
+│     Impact: leaf — unblocks nothing                           │
+│                                                                │
+│  5. bd-i9j0  [P3] Add telemetry hooks               feature   │
+│     Impact: leaf — unblocks nothing                           │
+│                                                                │
+│ 5 ready issues, 6 total blocked                                │
+├────────────────────────────────────────────────────────────────-┤
+│ enter:detail  s:sort  e:expand/collapse  r:refresh  ?:help     │
+└────────────────────────────────────────────────────────────────-┘
+```
+
+**Ranking algorithm:** Each ready issue is scored by the transitive set of issues it blocks (directly or indirectly through chains). The default sort uses a composite score:
+
+1. **Blocked priority sum** — sum of `(4 - priority)` for every transitively blocked issue. A blocked P0 contributes 4, a P1 contributes 3, etc. Higher is more impactful.
+2. **Unblock count** — total number of transitively blocked issues.
+3. **Max chain depth** — length of the longest downstream chain. Deeper chains mean this issue is the first domino in a long sequence.
+4. **Own priority** — the ready issue's own priority as a tiebreaker.
+
+Sort modes (toggle with `s`):
+
+- **Impact** (default): composite score described above
+- **Priority**: own priority first, then impact
+- **Chain depth**: longest chain first
+- **Unblock count**: most issues unblocked first
+
+**Display modes:**
+
+- **Expanded** (default): shows the immediate downstream tree (direct dependents + one more level) under each ready issue
+- **Collapsed** (`e` to toggle): compact one-line-per-issue with inline impact summary
+
+Features:
+
+- Enter on a ready issue opens its Detail view
+- Enter on a downstream issue jumps to that issue's Detail view
+- Visual distinction between direct dependents and transitive dependents
+- "Leaf" label for ready issues that unblock nothing (still shown, sorted last)
+
+Data sources: `bd ready --json --explain`, `bd list --json` + `bd show <id> --json` for dependency graph construction. The downstream impact tree is computed locally from the full dependency DAG — same graph used by the Critical Path view.
+
 ---
 
 ## Project Structure
@@ -321,7 +389,8 @@ loom/
 │   │   ├── list.go              # Issue list view model
 │   │   ├── detail.go            # Issue detail view model
 │   │   ├── tree.go              # Dependency tree view model
-│   │   └── critical.go          # Critical path view model
+│   │   ├── critical.go          # Critical path view model
+│   │   └── focus.go             # Focus view model (impact-ranked ready queue)
 │   └── graph/
 │       ├── dag.go               # Directed acyclic graph operations
 │       ├── critical_path.go     # Longest-path / critical chain finder
@@ -357,6 +426,7 @@ Loom assumes it is run from the root of a project where Beads has been initializ
 | `i` | Switch to Issue List |
 | `t` | Switch to Dependency Tree |
 | `c` | Switch to Critical Path |
+| `f` | Switch to Focus (impact-ranked ready queue) |
 | `r` | Manual refresh |
 | `w` | Toggle watch mode |
 | `?` | Help overlay |
@@ -386,7 +456,8 @@ Loom assumes it is run from the root of a project where Beads has been initializ
 - [ ] `internal/graph` — DAG construction from issue dependency data
 - [ ] Dependency Tree view (rooted + forest mode)
 - [ ] Critical Path view (longest blocking chains)
-- [ ] Jump-to-detail from tree/critical path nodes
+- [ ] Focus view (impact-ranked ready queue with downstream trees)
+- [ ] Jump-to-detail from tree/critical path/focus nodes
 
 ### Phase 4: Polish
 
