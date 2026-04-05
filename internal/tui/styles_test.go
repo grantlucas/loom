@@ -181,3 +181,48 @@ func TestPriorityStyle_UnknownPriorityDefaultsToGray(t *testing.T) {
 		t.Errorf("PriorityStyle(99): got foreground %v, want gray (243)", got)
 	}
 }
+
+func TestPlainPriority(t *testing.T) {
+	for pri := 0; pri <= 4; pri++ {
+		got := PlainPriority(pri)
+		want := fmt.Sprintf("P%d", pri)
+		if got != want {
+			t.Errorf("PlainPriority(%d) = %q, want %q", pri, got, want)
+		}
+	}
+}
+
+func TestPlainPriority_ContainsNoANSI(t *testing.T) {
+	got := PlainPriority(1)
+	if strings.Contains(got, "\x1b") {
+		t.Errorf("PlainPriority should not contain ANSI escape codes, got %q", got)
+	}
+}
+
+func TestPlainStatus(t *testing.T) {
+	tests := []struct {
+		status   string
+		depCount int
+		want     string
+	}{
+		{"closed", 0, "✓"},
+		{"in_progress", 0, "◐"},
+		{"open", 0, "○"},
+		{"open", 2, "●"},
+	}
+	for _, tt := range tests {
+		issue := datasource.Issue{Status: tt.status, DependencyCount: tt.depCount}
+		got := PlainStatus(issue)
+		if got != tt.want {
+			t.Errorf("PlainStatus(%s, deps=%d) = %q, want %q", tt.status, tt.depCount, got, tt.want)
+		}
+	}
+}
+
+func TestPlainStatus_ContainsNoANSI(t *testing.T) {
+	issue := datasource.Issue{Status: "in_progress"}
+	got := PlainStatus(issue)
+	if strings.Contains(got, "\x1b") {
+		t.Errorf("PlainStatus should not contain ANSI escape codes, got %q", got)
+	}
+}

@@ -124,6 +124,26 @@ func StyledStatus(issue datasource.Issue) string {
 	return StatusStyle(issue.Status).Render(icon)
 }
 
+// PlainPriority returns a priority string like "P0", "P1", etc. without ANSI styling.
+func PlainPriority(priority int) string {
+	return fmt.Sprintf("P%d", priority)
+}
+
+// PlainStatus returns a status indicator for an issue without ANSI styling.
+func PlainStatus(issue datasource.Issue) string {
+	switch issue.Status {
+	case "closed":
+		return "✓"
+	case "in_progress":
+		return "◐"
+	default:
+		if issue.DependencyCount > 0 {
+			return "●"
+		}
+		return "○"
+	}
+}
+
 // StyledStatusSimple returns a color-coded status indicator from just a status string.
 // Uses ○ for open (no dependency info available), ◐ for in_progress, ✓ for closed.
 func StyledStatusSimple(status string) string {

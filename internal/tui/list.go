@@ -117,9 +117,9 @@ func (v *ListView) rebuildRows() {
 	for i, issue := range issues {
 		rows[i] = table.Row{
 			issue.ID,
-			StyledPriority(issue.Priority),
+			PlainPriority(issue.Priority),
 			issue.IssueType,
-			StyledStatus(issue) + " " + issue.Status,
+			PlainStatus(issue) + " " + issue.Status,
 			issue.Assignee,
 			issue.Title,
 		}
