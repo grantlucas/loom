@@ -50,3 +50,17 @@ func TestIssueDetailErrMsg_CarriesError(t *testing.T) {
 		t.Error("IssueDetailErrMsg should carry the error")
 	}
 }
+
+func TestReadyLoadedMsg_CarriesIssues(t *testing.T) {
+	issues := []datasource.Issue{
+		{ID: "ready-1", Title: "Ready One"},
+		{ID: "ready-2", Title: "Ready Two"},
+	}
+	msg := ReadyLoadedMsg{Issues: issues}
+	if len(msg.Issues) != 2 {
+		t.Errorf("ReadyLoadedMsg should carry 2 issues, got %d", len(msg.Issues))
+	}
+	if msg.Issues[0].ID != "ready-1" {
+		t.Error("ReadyLoadedMsg should preserve issue order")
+	}
+}

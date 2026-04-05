@@ -74,3 +74,10 @@ func TestGotoPromptStyle_IsBold(t *testing.T) {
 		t.Error("goto prompt style should be bold")
 	}
 }
+
+func TestDashboardBarStyle_HasForegroundColor(t *testing.T) {
+	fg := dashboardBarStyle.GetForeground()
+	if fg == (lipgloss.NoColor{}) {
+		t.Error("dashboard bar style should have a foreground color")
+	}
+}

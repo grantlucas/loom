@@ -45,4 +45,8 @@ var (
 	// Goto prompt
 	gotoPromptStyle = lipgloss.NewStyle().
 			Bold(true)
+
+	// Dashboard bar chart
+	dashboardBarStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("205"))
 )

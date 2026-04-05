@@ -31,3 +31,8 @@ type IssueDetailLoadedMsg struct {
 type IssueDetailErrMsg struct {
 	Err error
 }
+
+// ReadyLoadedMsg carries fetched ready-queue issues into the update loop.
+type ReadyLoadedMsg struct {
+	Issues []datasource.Issue
+}

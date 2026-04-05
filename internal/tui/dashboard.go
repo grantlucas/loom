@@ -1,0 +1,231 @@
+package tui
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/grantlucas/loom/internal/datasource"
+)
+
+const barMaxWidth = 30
+
+// DashboardView shows project health at a glance.
+type DashboardView struct {
+	issues []datasource.Issue
+	ready  []datasource.Issue
+}
+
+// NewDashboardView creates a new DashboardView.
+func NewDashboardView() *DashboardView {
+	return &DashboardView{}
+}
+
+// SetIssues updates the full issue list for computing stats.
+func (d *DashboardView) SetIssues(issues []datasource.Issue) {
+	d.issues = issues
+}
+
+// SetReady updates the ready-queue issues.
+func (d *DashboardView) SetReady(issues []datasource.Issue) {
+	d.ready = issues
+}
+
+// Update handles messages. The dashboard has no interactive elements.
+func (d *DashboardView) Update(_ tea.Msg) tea.Cmd {
+	return nil
+}
+
+// View renders the dashboard.
+func (d *DashboardView) View() string {
+	if len(d.issues) == 0 {
+		return "  No data loaded"
+	}
+
+	var b strings.Builder
+	d.renderStatus(&b)
+	d.renderPriority(&b)
+	d.renderReadyQueue(&b)
+	d.renderBlocked(&b)
+	d.renderStats(&b)
+	return b.String()
+}
+
+func (d *DashboardView) renderStatus(b *strings.Builder) {
+	open, inProgress, closed := d.statusCounts()
+	b.WriteString(detailSectionStyle.Render("── Status ──────────────────────────"))
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("  Open: %d   In Progress: %d   Closed: %d\n", open, inProgress, closed))
+	b.WriteString("\n")
+}
+
+func (d *DashboardView) statusCounts() (open, inProgress, closed int) {
+	for _, issue := range d.issues {
+		switch issue.Status {
+		case "open":
+			open++
+		case "in_progress":
+			inProgress++
+		case "closed":
+			closed++
+		}
+	}
+	return
+}
+
+func (d *DashboardView) renderPriority(b *strings.Builder) {
+	dist := d.priorityDistribution()
+	b.WriteString(detailSectionStyle.Render("── Priority ────────────────────────"))
+	b.WriteString("\n")
+
+	// Find max count for scaling
+	maxCount := 0
+	for _, count := range dist {
+		if count > maxCount {
+			maxCount = count
+		}
+	}
+
+	// Sort priorities
+	priorities := make([]int, 0, len(dist))
+	for p := range dist {
+		priorities = append(priorities, p)
+	}
+	sort.Ints(priorities)
+
+	for _, p := range priorities {
+		count := dist[p]
+		barLen := count
+		if maxCount > 0 {
+			barLen = (count * barMaxWidth) / maxCount
+		}
+		if barLen < 1 {
+			barLen = 1
+		}
+		bar := dashboardBarStyle.Render(strings.Repeat("█", barLen))
+		b.WriteString(fmt.Sprintf("  P%d %s %d\n", p, bar, count))
+	}
+	b.WriteString("\n")
+}
+
+func (d *DashboardView) priorityDistribution() map[int]int {
+	dist := make(map[int]int)
+	for _, issue := range d.issues {
+		dist[issue.Priority]++
+	}
+	return dist
+}
+
+func (d *DashboardView) renderReadyQueue(b *strings.Builder) {
+	b.WriteString(detailSectionStyle.Render("── Ready Queue ─────────────────────"))
+	b.WriteString("\n")
+	if len(d.ready) == 0 {
+		b.WriteString("  None\n")
+		b.WriteString("\n")
+		return
+	}
+	limit := 5
+	if len(d.ready) < limit {
+		limit = len(d.ready)
+	}
+	for _, issue := range d.ready[:limit] {
+		b.WriteString(fmt.Sprintf("  %-14s P%d  %s\n", issue.ID, issue.Priority, issue.Title))
+	}
+	b.WriteString("\n")
+}
+
+type blockedInfo struct {
+	issue     datasource.Issue
+	blockedBy []string
+}
+
+func (d *DashboardView) renderBlocked(b *strings.Builder) {
+	b.WriteString(detailSectionStyle.Render("── Blocked ─────────────────────────"))
+	b.WriteString("\n")
+	blocked := d.blockedIssues()
+	if len(blocked) == 0 {
+		b.WriteString("  None\n")
+		b.WriteString("\n")
+		return
+	}
+	for _, bi := range blocked {
+		b.WriteString(fmt.Sprintf("  %-14s Waiting for: %s\n", bi.issue.ID, strings.Join(bi.blockedBy, ", ")))
+	}
+	b.WriteString("\n")
+}
+
+func (d *DashboardView) blockedIssues() []blockedInfo {
+	statusMap := make(map[string]string, len(d.issues))
+	for _, issue := range d.issues {
+		statusMap[issue.ID] = issue.Status
+	}
+
+	var result []blockedInfo
+	for _, issue := range d.issues {
+		if issue.Status == "closed" {
+			continue
+		}
+		var blockers []string
+		for _, dep := range issue.Dependencies {
+			if statusMap[dep.DependsOnID] != "closed" {
+				blockers = append(blockers, dep.DependsOnID)
+			}
+		}
+		if len(blockers) > 0 {
+			result = append(result, blockedInfo{issue: issue, blockedBy: blockers})
+		}
+	}
+	return result
+}
+
+func (d *DashboardView) renderStats(b *strings.Builder) {
+	b.WriteString(detailSectionStyle.Render("── Stats ───────────────────────────"))
+	b.WriteString("\n")
+	chain := d.longestChain()
+	b.WriteString(fmt.Sprintf("  Longest chain: %d   Total: %d\n", chain, len(d.issues)))
+}
+
+func (d *DashboardView) longestChain() int {
+	// Build adjacency: issue -> what it depends on
+	deps := make(map[string][]string)
+	for _, issue := range d.issues {
+		for _, dep := range issue.Dependencies {
+			deps[dep.IssueID] = append(deps[dep.IssueID], dep.DependsOnID)
+		}
+	}
+
+	memo := make(map[string]int)
+	visiting := make(map[string]bool)
+
+	var dfs func(id string) int
+	dfs = func(id string) int {
+		if visiting[id] {
+			return 0
+		}
+		if v, ok := memo[id]; ok {
+			return v
+		}
+		visiting[id] = true
+		maxDepth := 0
+		for _, depID := range deps[id] {
+			depth := dfs(depID)
+			if depth > maxDepth {
+				maxDepth = depth
+			}
+		}
+		visiting[id] = false
+		memo[id] = maxDepth + 1
+		return maxDepth + 1
+	}
+
+	longest := 0
+	for _, issue := range d.issues {
+		depth := dfs(issue.ID)
+		if depth > longest {
+			longest = depth
+		}
+	}
+	return longest
+}
