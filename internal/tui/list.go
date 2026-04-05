@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/grantlucas/loom/internal/datasource"
 )
@@ -31,10 +32,14 @@ var statusOrder = map[string]int{
 
 // ListView displays a table of all issues with sorting and navigation.
 type ListView struct {
-	table   table.Model
-	issues  []datasource.Issue
-	sortCol sortColumn
-	sortKey key.Binding
+	table      table.Model
+	issues     []datasource.Issue
+	filtered   []datasource.Issue
+	sortCol    sortColumn
+	sortKey    key.Binding
+	filterMode bool
+	filterText string
+	filterInput textinput.Model
 }
 
 // NewListView creates a new ListView with default settings.
@@ -53,10 +58,15 @@ func NewListView() *ListView {
 		table.WithFocused(true),
 	)
 
+	fi := textinput.New()
+	fi.Placeholder = "status:open priority:1 text..."
+	fi.CharLimit = 100
+
 	return &ListView{
-		table:   t,
-		sortCol: sortByPriority,
-		sortKey: key.NewBinding(key.WithKeys("s")),
+		table:       t,
+		sortCol:     sortByPriority,
+		sortKey:     key.NewBinding(key.WithKeys("s")),
+		filterInput: fi,
 	}
 }
 
@@ -108,8 +118,9 @@ func statusIndicator(issue datasource.Issue) string {
 }
 
 func (v *ListView) rebuildRows() {
-	rows := make([]table.Row, len(v.issues))
-	for i, issue := range v.issues {
+	issues := v.displayIssues()
+	rows := make([]table.Row, len(issues))
+	for i, issue := range issues {
 		rows[i] = table.Row{
 			issue.ID,
 			fmt.Sprintf("P%d", issue.Priority),
@@ -151,9 +162,36 @@ func (v *ListView) SelectedIssueID() string {
 func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if v.filterMode {
+			switch msg.Type {
+			case tea.KeyEnter:
+				v.filterMode = false
+				v.filterInput.Blur()
+				v.filterText = v.filterInput.Value()
+				v.applyFilter()
+				return nil
+			case tea.KeyEscape:
+				v.filterMode = false
+				v.filterInput.Blur()
+				v.filterText = ""
+				v.filterInput.Reset()
+				v.applyFilter()
+				return nil
+			default:
+				var cmd tea.Cmd
+				v.filterInput, cmd = v.filterInput.Update(msg)
+				return cmd
+			}
+		}
+
 		if key.Matches(msg, v.sortKey) {
 			v.sortCol = (v.sortCol + 1) % (sortByTitle + 1)
 			v.sortAndRefresh()
+			return nil
+		}
+		if msg.String() == "/" {
+			v.filterMode = true
+			v.filterInput.Focus()
 			return nil
 		}
 	}
@@ -162,13 +200,53 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
+func (v *ListView) applyFilter() {
+	if v.filterText == "" {
+		v.filtered = nil
+		v.sortAndRefresh()
+		return
+	}
+	v.filtered = nil
+	for _, issue := range v.issues {
+		if matchesFilter(issue, v.filterText) {
+			v.filtered = append(v.filtered, issue)
+		}
+	}
+	v.sortAndRefresh()
+}
+
+func matchesFilter(_ datasource.Issue, _ string) bool {
+	return true
+}
+
 // View renders the issue list table.
 func (v *ListView) View() string {
-	count := len(v.issues)
-	label := "issues"
-	if count == 1 {
-		label = "issue"
+	var status string
+	if v.filterMode {
+		return v.table.View() + "\n" + filterPromptStyle.Render("Filter: ") + v.filterInput.View()
 	}
-	status := statusBarStyle.Render(fmt.Sprintf("%d %s", count, label))
+	if v.filterText != "" {
+		displayed := len(v.displayIssues())
+		total := len(v.issues)
+		label := "issues"
+		if displayed == 1 {
+			label = "issue"
+		}
+		status = statusBarStyle.Render(fmt.Sprintf("%d of %d %s", displayed, total, label))
+	} else {
+		count := len(v.issues)
+		label := "issues"
+		if count == 1 {
+			label = "issue"
+		}
+		status = statusBarStyle.Render(fmt.Sprintf("%d %s", count, label))
+	}
 	return v.table.View() + "\n" + status
+}
+
+func (v *ListView) displayIssues() []datasource.Issue {
+	if v.filtered != nil {
+		return v.filtered
+	}
+	return v.issues
 }

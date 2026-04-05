@@ -49,4 +49,8 @@ var (
 	// Dashboard bar chart
 	dashboardBarStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("205"))
+
+	// Filter prompt
+	filterPromptStyle = lipgloss.NewStyle().
+				Bold(true)
 )

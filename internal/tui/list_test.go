@@ -266,3 +266,17 @@ func TestListView_RendersIssueData(t *testing.T) {
 		}
 	}
 }
+
+func TestListView_SlashEntersFilterMode(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "First"},
+	})
+
+	lv.Update(keyMsg('/'))
+
+	view := lv.View()
+	if !strings.Contains(view, "Filter:") {
+		t.Errorf("expected filter prompt in view after '/', got:\n%s", view)
+	}
+}
