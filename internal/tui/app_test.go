@@ -1220,6 +1220,47 @@ func TestApp_Update_ReadyLoadedMsg_SetsDataOnDashboardView(t *testing.T) {
 	}
 }
 
+func TestApp_Update_NoViewRegistered_ReturnsNil(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabTree // no view registered for Tree
+	model, cmd := app.Update(RefreshMsg{})
+	if cmd != nil {
+		t.Error("expected nil cmd when no view is registered for tab")
+	}
+	a := model.(App)
+	if a.activeTab != TabTree {
+		t.Error("expected tab to remain unchanged")
+	}
+}
+
+func TestApp_FetchIssues_ReturnsIssuesLoadedMsg(t *testing.T) {
+	ds := &mockDataSource{issues: []datasource.Issue{{ID: "fi-1"}}}
+	app := newTestAppWithDS(ds)
+	cmd := app.fetchIssues()
+	msg := cmd()
+	loaded, ok := msg.(IssuesLoadedMsg)
+	if !ok {
+		t.Fatalf("expected IssuesLoadedMsg, got %T", msg)
+	}
+	if len(loaded.Issues) != 1 || loaded.Issues[0].ID != "fi-1" {
+		t.Error("expected fetched issues in message")
+	}
+}
+
+func TestApp_FetchIssues_Error_ReturnsErrMsg(t *testing.T) {
+	ds := &mockDataSource{err: errors.New("list fail")}
+	app := newTestAppWithDS(ds)
+	cmd := app.fetchIssues()
+	msg := cmd()
+	errMsg, ok := msg.(ErrMsg)
+	if !ok {
+		t.Fatalf("expected ErrMsg, got %T", msg)
+	}
+	if errMsg.Err.Error() != "list fail" {
+		t.Errorf("expected error 'list fail', got %q", errMsg.Err.Error())
+	}
+}
+
 func TestApp_FetchReady_ReturnsReadyLoadedMsg(t *testing.T) {
 	ds := &mockDataSource{readyIssues: []datasource.Issue{{ID: "r-1"}}}
 	app := newTestAppWithDS(ds)

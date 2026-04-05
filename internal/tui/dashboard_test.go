@@ -157,6 +157,27 @@ func TestDashboardView_PriorityBarScaling(t *testing.T) {
 	}
 }
 
+func TestDashboardView_PriorityBarMinWidth(t *testing.T) {
+	dv := NewDashboardView()
+	// Create 31 issues at P0 and 1 at P1
+	// P1: 1*30/31 = 0 → should be clamped to 1
+	issues := make([]datasource.Issue, 0, 32)
+	for i := 0; i < 31; i++ {
+		issues = append(issues, datasource.Issue{ID: "a", Priority: 0})
+	}
+	issues = append(issues, datasource.Issue{ID: "b", Priority: 1})
+	dv.SetIssues(issues)
+	out := dv.View()
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "P1") {
+			if !strings.Contains(line, "█") {
+				t.Error("P1 bar should have at least one block even at minimum width")
+			}
+			break
+		}
+	}
+}
+
 // --- Ready queue ---
 
 func TestDashboardView_ReadyQueue(t *testing.T) {
