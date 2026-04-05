@@ -59,6 +59,13 @@ func TestNewApp_DefaultsToDashboard(t *testing.T) {
 	}
 }
 
+func TestNewApp_StartsInLoadingState(t *testing.T) {
+	app := newTestApp()
+	if !app.loading {
+		t.Error("expected new app to start in loading state")
+	}
+}
+
 func TestNewApp_StoresDataSource(t *testing.T) {
 	ds := &mockDataSource{}
 	app := NewApp(ds, 5*time.Second, false)

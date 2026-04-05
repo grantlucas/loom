@@ -65,6 +65,7 @@ type App struct {
 	gotoInput textinput.Model
 	width     int
 	height    int
+	loading   bool
 }
 
 // NewApp creates a new App wired to the given DataSource.
@@ -88,6 +89,7 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		interval:  interval,
 		watchMode: watch,
 		gotoInput: ti,
+		loading:   true,
 	}
 }
 
