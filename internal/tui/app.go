@@ -61,6 +61,7 @@ type App struct {
 func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 	views := map[Tab]View{
 		TabIssues: NewListView(),
+		TabDetail: NewDetailView(),
 	}
 	return App{
 		activeTab: TabDashboard,
@@ -94,6 +95,16 @@ func (a App) fetchIssues() tea.Cmd {
 	}
 }
 
+func (a App) fetchIssueDetail(id string) tea.Cmd {
+	return func() tea.Msg {
+		detail, err := a.ds.GetIssue(id)
+		if err != nil {
+			return IssueDetailErrMsg{Err: err}
+		}
+		return IssueDetailLoadedMsg{Detail: detail}
+	}
+}
+
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case IssuesLoadedMsg:
@@ -105,6 +116,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ErrMsg:
 		a.err = msg.Err
+		return a, nil
+
+	case IssueDetailLoadedMsg:
+		if dv, ok := a.views[TabDetail].(*DetailView); ok {
+			dv.SetDetail(msg.Detail)
+		}
+		return a, nil
+
+	case IssueDetailErrMsg:
+		if dv, ok := a.views[TabDetail].(*DetailView); ok {
+			dv.SetError(msg.Err)
+		}
 		return a, nil
 
 	case TickMsg:
@@ -129,6 +152,22 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		case key.Matches(msg, a.keys.CriticalPath):
 			a.activeTab = TabCriticalPath
+			return a, nil
+		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabIssues:
+			if lv, ok := a.views[TabIssues].(*ListView); ok {
+				id := lv.SelectedIssueID()
+				if id == "" {
+					return a, nil
+				}
+				a.activeTab = TabDetail
+				if dv, ok := a.views[TabDetail].(*DetailView); ok {
+					dv.SetLoading()
+				}
+				return a, a.fetchIssueDetail(id)
+			}
+			return a, nil
+		case key.Matches(msg, a.keys.Back) && a.activeTab == TabDetail:
+			a.activeTab = TabIssues
 			return a, nil
 		case key.Matches(msg, a.keys.Refresh):
 			if inv, ok := a.ds.(interface{ Invalidate() }); ok {
@@ -176,6 +215,8 @@ func (a App) renderHelp() string {
 		{"i", "Issues"},
 		{"t", "Tree"},
 		{"c", "Critical Path"},
+		{"enter", "Open detail"},
+		{"esc", "Back"},
 		{"r", "Refresh"},
 		{"w", "Toggle watch mode"},
 		{"?", "Toggle help"},

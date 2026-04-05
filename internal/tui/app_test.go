@@ -17,6 +17,9 @@ type mockDataSource struct {
 	err         error
 	callCount   int
 	invalidated bool
+	detail      *datasource.IssueDetail
+	detailErr   error
+	getIssueID  string
 }
 
 func (m *mockDataSource) ListIssues() ([]datasource.Issue, error) {
@@ -24,8 +27,9 @@ func (m *mockDataSource) ListIssues() ([]datasource.Issue, error) {
 	return m.issues, m.err
 }
 
-func (m *mockDataSource) GetIssue(string) (*datasource.IssueDetail, error) {
-	return nil, nil
+func (m *mockDataSource) GetIssue(id string) (*datasource.IssueDetail, error) {
+	m.getIssueID = id
+	return m.detail, m.detailErr
 }
 
 func (m *mockDataSource) ListReady() ([]datasource.Issue, error) {
@@ -404,7 +408,7 @@ func (m *mockDataSourceNoInvalidate) ListIssues() ([]datasource.Issue, error) {
 	return m.issues, m.err
 }
 
-func (m *mockDataSourceNoInvalidate) GetIssue(string) (*datasource.IssueDetail, error) {
+func (m *mockDataSourceNoInvalidate) GetIssue(id string) (*datasource.IssueDetail, error) {
 	return nil, nil
 }
 
@@ -541,5 +545,221 @@ func TestApp_Update_UnhandledKey_WithView(t *testing.T) {
 	app.Update(keyMsg('x'))
 	if !stub.updateCalled {
 		t.Error("expected unhandled key to be delegated to active view")
+	}
+}
+
+func TestNewApp_RegistersDetailView(t *testing.T) {
+	app := newTestApp()
+	v, ok := app.views[TabDetail]
+	if !ok {
+		t.Fatal("expected TabDetail view to be registered")
+	}
+	if _, ok := v.(*DetailView); !ok {
+		t.Errorf("expected *DetailView, got %T", v)
+	}
+}
+
+func enterKeyMsg() tea.Msg {
+	return tea.KeyMsg{Type: tea.KeyEnter}
+}
+
+func escKeyMsg() tea.Msg {
+	return tea.KeyMsg{Type: tea.KeyEscape}
+}
+
+func TestApp_EnterOnIssues_SwitchesToDetail(t *testing.T) {
+	ds := &mockDataSource{
+		issues: []datasource.Issue{{ID: "x-1", Title: "Test"}},
+		detail: &datasource.IssueDetail{ID: "x-1", Title: "Test"},
+	}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabIssues
+	// Load issues into list view
+	app.Update(IssuesLoadedMsg{Issues: ds.issues})
+	lv := app.views[TabIssues].(*ListView)
+	lv.SetIssues(ds.issues)
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabDetail {
+		t.Errorf("expected TabDetail, got %d", a.activeTab)
+	}
+	if cmd == nil {
+		t.Fatal("expected fetch command from Enter key")
+	}
+}
+
+func TestApp_EnterOnIssues_ReturnsFetchCmd(t *testing.T) {
+	detail := &datasource.IssueDetail{ID: "x-1", Title: "Test Issue"}
+	ds := &mockDataSource{
+		issues: []datasource.Issue{{ID: "x-1", Title: "Test"}},
+		detail: detail,
+	}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabIssues
+	lv := app.views[TabIssues].(*ListView)
+	lv.SetIssues(ds.issues)
+
+	_, cmd := app.Update(enterKeyMsg())
+	if cmd == nil {
+		t.Fatal("expected fetch command")
+	}
+	msg := cmd()
+	loaded, ok := msg.(IssueDetailLoadedMsg)
+	if !ok {
+		t.Fatalf("expected IssueDetailLoadedMsg, got %T", msg)
+	}
+	if loaded.Detail.ID != "x-1" {
+		t.Errorf("expected detail ID 'x-1', got %q", loaded.Detail.ID)
+	}
+}
+
+func TestApp_EnterOnIssues_NoSelection_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabIssues
+	// ListView has no issues loaded, so SelectedIssueID() returns ""
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabIssues {
+		t.Error("expected to stay on Issues tab when no selection")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd when no selection")
+	}
+}
+
+func TestApp_EnterOnNonIssuesTab_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabDashboard
+
+	model, _ := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabDashboard {
+		t.Error("expected to stay on Dashboard when Enter pressed")
+	}
+}
+
+func TestApp_EscOnDetail_SwitchesToIssues(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabDetail
+
+	model, cmd := app.Update(escKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabIssues {
+		t.Errorf("expected TabIssues, got %d", a.activeTab)
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd from Escape")
+	}
+}
+
+func TestApp_EscOnNonDetailTab_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabIssues
+	stub := &stubView{}
+	app.views[TabIssues] = stub
+
+	app.Update(escKeyMsg())
+	// Esc on non-detail tab should be delegated to the active view
+	if !stub.updateCalled {
+		t.Error("expected Escape to be delegated on non-detail tab")
+	}
+}
+
+func TestApp_IssueDetailLoadedMsg_RoutesToDetailView(t *testing.T) {
+	app := newTestApp()
+	detail := &datasource.IssueDetail{ID: "d-1", Title: "Detail Test"}
+	app.Update(IssueDetailLoadedMsg{Detail: detail})
+
+	dv := app.views[TabDetail].(*DetailView)
+	if dv.detail == nil || dv.detail.ID != "d-1" {
+		t.Error("expected IssueDetailLoadedMsg to set detail on DetailView")
+	}
+}
+
+func TestApp_IssueDetailErrMsg_RoutesToDetailView(t *testing.T) {
+	app := newTestApp()
+	app.Update(IssueDetailErrMsg{Err: errors.New("detail fail")})
+
+	dv := app.views[TabDetail].(*DetailView)
+	if dv.err == nil || dv.err.Error() != "detail fail" {
+		t.Error("expected IssueDetailErrMsg to set error on DetailView")
+	}
+}
+
+func TestApp_FetchIssueDetail_CallsGetIssue(t *testing.T) {
+	detail := &datasource.IssueDetail{ID: "f-1", Title: "Fetch Test"}
+	ds := &mockDataSource{detail: detail}
+	app := newTestAppWithDS(ds)
+
+	cmd := app.fetchIssueDetail("f-1")
+	msg := cmd()
+	if ds.getIssueID != "f-1" {
+		t.Errorf("expected GetIssue called with 'f-1', got %q", ds.getIssueID)
+	}
+	loaded, ok := msg.(IssueDetailLoadedMsg)
+	if !ok {
+		t.Fatalf("expected IssueDetailLoadedMsg, got %T", msg)
+	}
+	if loaded.Detail.ID != "f-1" {
+		t.Error("expected loaded detail to have ID 'f-1'")
+	}
+}
+
+func TestApp_FetchIssueDetail_Error(t *testing.T) {
+	ds := &mockDataSource{detailErr: errors.New("not found")}
+	app := newTestAppWithDS(ds)
+
+	cmd := app.fetchIssueDetail("bad-1")
+	msg := cmd()
+	errMsg, ok := msg.(IssueDetailErrMsg)
+	if !ok {
+		t.Fatalf("expected IssueDetailErrMsg, got %T", msg)
+	}
+	if errMsg.Err.Error() != "not found" {
+		t.Errorf("expected error 'not found', got %q", errMsg.Err.Error())
+	}
+}
+
+func TestApp_EnterOnIssues_SetsDetailLoading(t *testing.T) {
+	ds := &mockDataSource{
+		issues: []datasource.Issue{{ID: "l-1", Title: "Loading Test"}},
+		detail: &datasource.IssueDetail{ID: "l-1"},
+	}
+	app := newTestAppWithDS(ds)
+	app.activeTab = TabIssues
+	lv := app.views[TabIssues].(*ListView)
+	lv.SetIssues(ds.issues)
+
+	model, _ := app.Update(enterKeyMsg())
+	a := model.(App)
+	dv := a.views[TabDetail].(*DetailView)
+	if !dv.loading {
+		t.Error("expected DetailView to be in loading state after Enter")
+	}
+}
+
+func TestApp_EnterOnIssues_NonListView_IsNoop(t *testing.T) {
+	app := newTestApp()
+	app.activeTab = TabIssues
+	app.views[TabIssues] = &stubView{} // Replace ListView with stub
+
+	model, cmd := app.Update(enterKeyMsg())
+	a := model.(App)
+	if a.activeTab != TabIssues {
+		t.Error("expected to stay on Issues when view is not *ListView")
+	}
+	if cmd != nil {
+		t.Error("expected nil cmd")
+	}
+}
+
+func TestApp_HelpOverlay_ShowsEnterAndEsc(t *testing.T) {
+	app := newTestApp()
+	app.showHelp = true
+	view := app.View()
+	if !strings.Contains(view, "enter") || !strings.Contains(view, "esc") {
+		t.Error("help overlay should show enter and esc bindings")
 	}
 }
