@@ -44,6 +44,23 @@ func (t Tab) String() string {
 	return "Unknown"
 }
 
+var tabShortcuts = [...]string{
+	TabDashboard:    "d",
+	TabIssues:       "i",
+	TabDetail:       "",
+	TabTree:         "t",
+	TabCriticalPath: "c",
+	TabFocus:        "f",
+}
+
+// Shortcut returns the keyboard shortcut key for a tab, or empty string if none.
+func (t Tab) Shortcut() string {
+	if int(t) < len(tabShortcuts) {
+		return tabShortcuts[t]
+	}
+	return ""
+}
+
 // View is the interface that each tab's view must implement.
 type View interface {
 	Update(msg tea.Msg) tea.Cmd
@@ -482,10 +499,14 @@ func (a App) renderHelp() string {
 func (a App) renderTabBar() string {
 	var tabs []string
 	for _, tab := range allTabs {
+		label := tab.String()
+		if s := tab.Shortcut(); s != "" {
+			label += " (" + s + ")"
+		}
 		if tab == a.activeTab {
-			tabs = append(tabs, activeTabStyle.Render(tab.String()))
+			tabs = append(tabs, activeTabStyle.Render(label))
 		} else {
-			tabs = append(tabs, inactiveTabStyle.Render(tab.String()))
+			tabs = append(tabs, inactiveTabStyle.Render(label))
 		}
 	}
 	if a.watchMode {

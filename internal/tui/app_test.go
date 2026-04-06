@@ -1837,3 +1837,49 @@ func TestApp_HelpOverlay_ShowsViewSpecificHelp(t *testing.T) {
 		}
 	}
 }
+
+func TestTab_Shortcut(t *testing.T) {
+	tests := []struct {
+		tab  Tab
+		want string
+	}{
+		{TabDashboard, "d"},
+		{TabIssues, "i"},
+		{TabDetail, ""},
+		{TabTree, "t"},
+		{TabCriticalPath, "c"},
+		{TabFocus, "f"},
+	}
+	for _, tt := range tests {
+		got := tt.tab.Shortcut()
+		if got != tt.want {
+			t.Errorf("%s.Shortcut() = %q, want %q", tt.tab, got, tt.want)
+		}
+	}
+}
+
+func TestApp_TabBarShowsShortcuts(t *testing.T) {
+	app := newTestApp()
+	view := app.View()
+
+	// Tabs with shortcuts should show them in parentheses
+	shortcuts := []struct {
+		label string
+	}{
+		{"Dashboard (d)"},
+		{"Issues (i)"},
+		{"Tree (t)"},
+		{"Critical Path (c)"},
+		{"Focus (f)"},
+	}
+	for _, s := range shortcuts {
+		if !strings.Contains(view, s.label) {
+			t.Errorf("expected view to contain %q", s.label)
+		}
+	}
+
+	// Detail tab has no shortcut, should not show parentheses
+	if strings.Contains(view, "Detail (") {
+		t.Error("Detail tab should not show a shortcut key")
+	}
+}
