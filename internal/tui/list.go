@@ -371,6 +371,7 @@ const minTitleWidth = 10
 func (v *ListView) Resize(width, height int) {
 	v.width = width
 	v.height = height
+	v.table.SetHeight(height)
 
 	fixedTotal := 0
 	for _, w := range fixedColumnWidths {

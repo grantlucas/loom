@@ -1025,6 +1025,20 @@ func TestListView_ImplementsJumper(t *testing.T) {
 	var _ Jumper = NewListView()
 }
 
+func TestListView_Resize_SetsTableHeight(t *testing.T) {
+	lv := NewListView()
+	lv.Resize(80, 25)
+	// table.Height() returns viewport height (total minus header row)
+	if got := lv.table.Height(); got != 24 {
+		t.Errorf("table viewport height should be 24, got %d", got)
+	}
+
+	lv.Resize(80, 40)
+	if got := lv.table.Height(); got != 39 {
+		t.Errorf("table viewport height should be 39 after resize, got %d", got)
+	}
+}
+
 func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
 	lv := NewListView()
 	lv.Resize(40, 30) // very narrow
