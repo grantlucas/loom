@@ -503,7 +503,7 @@ func friendlyError(err error) string {
 	case errors.Is(err, datasource.ErrMalformedResponse):
 		return "Unexpected response from bd. Check bd version."
 	case errors.Is(err, datasource.ErrDatabaseLocked):
-		return "Database locked by another process. Close other bd commands and retry."
+		return "Database locked by another process. Retries exhausted. Close other bd commands."
 	default:
 		return "Error: " + err.Error()
 	}

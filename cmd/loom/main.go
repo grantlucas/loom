@@ -37,7 +37,8 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 	}
 
 	exec := &datasource.BdExecutor{WorkDir: cfg.BeadsDir}
-	client := datasource.NewClient(exec)
+	retryExec := datasource.NewRetryExecutor(exec)
+	client := datasource.NewClient(retryExec)
 	cache := datasource.NewCache(client, cfg.Interval)
 
 	app := tui.NewApp(cache, cfg.Interval, cfg.Watch)

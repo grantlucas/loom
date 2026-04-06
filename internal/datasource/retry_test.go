@@ -117,6 +117,52 @@ func TestRetryExecutorDoesNotRetryNonLockErrors(t *testing.T) {
 	}
 }
 
+func TestRetryExecutorStopsRetryingOnNonLockError(t *testing.T) {
+	// First call: lock error (triggers retry), second call: different error (stops)
+	inner := &sequenceExecutor{
+		results: []execResult{
+			{err: fmt.Errorf("%w: locked", ErrDatabaseLocked)},
+			{err: fmt.Errorf("unexpected failure")},
+		},
+	}
+	sr := &sleepRecorder{}
+	retry := NewRetryExecutor(inner)
+	retry.sleep = sr.sleep
+
+	_, err := retry.Execute("list")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "unexpected failure" {
+		t.Errorf("error = %q, want %q", err.Error(), "unexpected failure")
+	}
+	if inner.callCount != 2 {
+		t.Errorf("callCount = %d, want 2", inner.callCount)
+	}
+	if len(sr.durations) != 1 {
+		t.Errorf("sleep called %d times, want 1", len(sr.durations))
+	}
+}
+
+type execResult struct {
+	output []byte
+	err    error
+}
+
+type sequenceExecutor struct {
+	results   []execResult
+	callCount int
+}
+
+func (e *sequenceExecutor) Execute(args ...string) ([]byte, error) {
+	idx := e.callCount
+	e.callCount++
+	if idx < len(e.results) {
+		return e.results[idx].output, e.results[idx].err
+	}
+	return nil, fmt.Errorf("no more results")
+}
+
 func TestRetryExecutorUsesExponentialBackoff(t *testing.T) {
 	lockErr := fmt.Errorf("%w: locked", ErrDatabaseLocked)
 	inner := &failThenSucceedExecutor{
