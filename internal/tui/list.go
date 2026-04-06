@@ -312,8 +312,7 @@ func (v *ListView) StatusHints() []StatusHint {
 		closedDesc = "hide closed"
 	}
 	hints := []StatusHint{
-		{Key: "s", Desc: "sort"},
-		{Key: "S", Desc: "reverse sort"},
+		{Key: "s/S", Desc: "sort/reverse"},
 		{Key: "/", Desc: "filter"},
 		{Key: "c", Desc: closedDesc},
 		{Key: "enter", Desc: "open"},
@@ -322,6 +321,14 @@ func (v *ListView) StatusHints() []StatusHint {
 		hints = append(hints, StatusHint{Key: "esc", Desc: "clear filter"})
 	}
 	return hints
+}
+
+// InfoLineView returns a pre-rendered info line when the filter input is active.
+func (v *ListView) InfoLineView() string {
+	if v.filterMode {
+		return filterPromptStyle.Render("Filter: ") + v.filterInput.View()
+	}
+	return ""
 }
 
 // StatusInfo returns contextual info for the secondary status line.
@@ -344,9 +351,6 @@ func (v *ListView) StatusInfo() string {
 
 // View renders the issue list table.
 func (v *ListView) View() string {
-	if v.filterMode {
-		return v.table.View() + "\n" + filterPromptStyle.Render("Filter: ") + v.filterInput.View()
-	}
 	return v.table.View()
 }
 

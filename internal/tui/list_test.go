@@ -31,6 +31,31 @@ func TestListView_ImplementsStatusInfoer(t *testing.T) {
 	var _ StatusInfoer = NewListView()
 }
 
+func TestListView_ImplementsInfoLineViewer(t *testing.T) {
+	var _ InfoLineViewer = NewListView()
+}
+
+func TestListView_InfoLineView_ReturnsFilterInFilterMode(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{{ID: "a-1", Title: "Test"}})
+	enterFilterMode(lv)
+
+	info := lv.InfoLineView()
+	if !strings.Contains(info, "Filter:") {
+		t.Errorf("expected InfoLineView to contain 'Filter:' in filter mode, got: %q", info)
+	}
+}
+
+func TestListView_InfoLineView_EmptyWhenNotFiltering(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{{ID: "a-1", Title: "Test"}})
+
+	info := lv.InfoLineView()
+	if info != "" {
+		t.Errorf("expected empty InfoLineView when not filtering, got: %q", info)
+	}
+}
+
 func TestListView_StatusInfo_ShowsCount(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
@@ -359,9 +384,14 @@ func TestListView_SlashEntersFilterMode(t *testing.T) {
 
 	lv.Update(keyMsg('/'))
 
+	// Filter prompt should NOT appear in View() — it's in InfoLineView() now
 	view := lv.View()
-	if !strings.Contains(view, "Filter:") {
-		t.Errorf("expected filter prompt in view after '/', got:\n%s", view)
+	if strings.Contains(view, "Filter:") {
+		t.Error("expected filter prompt NOT in View() (should be in InfoLineView)")
+	}
+	// Should be in InfoLineView instead
+	if !strings.Contains(lv.InfoLineView(), "Filter:") {
+		t.Error("expected filter prompt in InfoLineView after '/'")
 	}
 }
 
@@ -375,9 +405,9 @@ func TestListView_EscExitsFilterMode(t *testing.T) {
 	enterFilterMode(lv)
 	lv.Update(escKey())
 
-	view := lv.View()
-	if strings.Contains(view, "Filter:") {
-		t.Error("expected filter prompt to be hidden after Esc")
+	// InfoLineView should be empty after Esc (filter mode exited)
+	if lv.InfoLineView() != "" {
+		t.Error("expected InfoLineView to be empty after Esc")
 	}
 	// Should show all issues (no filter active)
 	if !strings.Contains(lv.StatusInfo(), "2 issues") {
@@ -647,7 +677,7 @@ func TestListView_StatusHints_NormalMode(t *testing.T) {
 		keys[h.Key] = h.Desc
 	}
 
-	for _, k := range []string{"s", "/", "enter"} {
+	for _, k := range []string{"s/S", "/", "enter"} {
 		if _, ok := keys[k]; !ok {
 			t.Errorf("expected hint for key %q in normal mode", k)
 		}
@@ -672,7 +702,7 @@ func TestListView_StatusHints_FilterMode(t *testing.T) {
 		t.Error("expected 'esc' hint in filter mode")
 	}
 	// Should NOT have sort hint in filter mode
-	if _, ok := keys["s"]; ok {
+	if _, ok := keys["s/S"]; ok {
 		t.Error("should not show sort hint in filter mode")
 	}
 }
@@ -890,15 +920,15 @@ func TestListView_StatusHints_ShowsSortDirection(t *testing.T) {
 	hints := lv.StatusHints()
 	found := false
 	for _, h := range hints {
-		if h.Key == "S" {
+		if h.Key == "s/S" {
 			found = true
-			if h.Desc != "reverse sort" {
-				t.Errorf("expected hint 'reverse sort', got %q", h.Desc)
+			if h.Desc != "sort/reverse" {
+				t.Errorf("expected hint 'sort/reverse', got %q", h.Desc)
 			}
 		}
 	}
 	if !found {
-		t.Error("expected 'S' hint in status hints")
+		t.Error("expected 's/S' hint in status hints")
 	}
 }
 

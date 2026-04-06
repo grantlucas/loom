@@ -385,17 +385,23 @@ func (a App) View() string {
 	hintsLine := renderStatusBar(hints, a.width)
 
 	// Build info line (below hints)
-	var info string
+	var infoLine string
 	if a.loading {
-		info = a.spinner.View() + " Loading..."
+		infoLine = renderInfoLine(a.spinner.View()+" Loading...", a.width)
 	} else if a.refreshing {
-		info = a.spinner.View() + " Refreshing..."
+		infoLine = renderInfoLine(a.spinner.View()+" Refreshing...", a.width)
 	} else if v, ok := a.views[a.activeTab]; ok {
-		if si, ok := v.(StatusInfoer); ok {
-			info = si.StatusInfo()
+		if ilv, ok := v.(InfoLineViewer); ok {
+			if line := ilv.InfoLineView(); line != "" {
+				infoLine = line
+			}
+		}
+		if infoLine == "" {
+			if si, ok := v.(StatusInfoer); ok {
+				infoLine = renderInfoLine(si.StatusInfo(), a.width)
+			}
 		}
 	}
-	infoLine := renderInfoLine(info, a.width)
 
 	statusBar := statusBarContainerStyle.Width(a.width).Render(
 		hintsLine + "\n" + infoLine,

@@ -1858,3 +1858,20 @@ func TestApp_HeightReservation_ThreeLines(t *testing.T) {
 		t.Errorf("expected ListView height 27 (30-3), got %d", lv.height)
 	}
 }
+
+func TestApp_FilterInput_RendersInInfoBar(t *testing.T) {
+	app := loadTestApp(t)
+
+	// Switch to issues tab
+	model, _ := app.Update(keyMsg('i'))
+	app = model.(App)
+
+	// Enter filter mode
+	model, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	app = model.(App)
+
+	view := app.View()
+	if !strings.Contains(view, "Filter:") {
+		t.Error("expected 'Filter:' in app view when filter mode active")
+	}
+}

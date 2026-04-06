@@ -23,6 +23,13 @@ type StatusInfoer interface {
 	StatusInfo() string
 }
 
+// InfoLineViewer is optionally implemented by views that provide a pre-rendered
+// info line (e.g. an active filter input). When non-empty, its output replaces
+// the default StatusInfo rendering in the info bar.
+type InfoLineViewer interface {
+	InfoLineView() string
+}
+
 // renderStatusBar renders a single-line status bar from the given hints.
 // Format: "key desc · key desc · key desc", truncated to fit width.
 func renderStatusBar(hints []StatusHint, width int) string {
