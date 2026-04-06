@@ -91,6 +91,23 @@ func (v *DetailView) SelectedRelationID() string {
 	return rels[v.relationCursor].ID
 }
 
+// JumpToTop moves the relation cursor to the first relation.
+func (v *DetailView) JumpToTop() {
+	v.relationCursor = 0
+	if v.detail != nil {
+		v.syncViewport()
+	}
+}
+
+// JumpToBottom moves the relation cursor to the last relation.
+func (v *DetailView) JumpToBottom() {
+	count := v.RelationCount()
+	if count > 0 {
+		v.relationCursor = count - 1
+		v.syncViewport()
+	}
+}
+
 var (
 	cursorDown = key.NewBinding(key.WithKeys("j"))
 	cursorUp   = key.NewBinding(key.WithKeys("k"))

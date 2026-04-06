@@ -565,6 +565,45 @@ func TestDetailView_ScrollsUpWhenCursorAtTopOfList(t *testing.T) {
 	}
 }
 
+// --- JumpToTop / JumpToBottom ---
+
+func TestDetailView_JumpToTop_MovesCursorToFirst(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail()) // 2 relations
+	dv.Update(keyMsg('j'))     // move to index 1
+	dv.JumpToTop()
+	if dv.SelectedRelationID() != "proj-1" {
+		t.Errorf("expected cursor at proj-1 after JumpToTop, got %q", dv.SelectedRelationID())
+	}
+}
+
+func TestDetailView_JumpToBottom_MovesCursorToLast(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(testDetail()) // 2 relations
+	dv.JumpToBottom()
+	if dv.SelectedRelationID() != "proj-3" {
+		t.Errorf("expected cursor at proj-3 after JumpToBottom, got %q", dv.SelectedRelationID())
+	}
+}
+
+func TestDetailView_JumpToTop_NoRelations_IsNoop(t *testing.T) {
+	dv := NewDetailView()
+	d := testDetail()
+	d.Dependencies = nil
+	d.Dependents = nil
+	dv.SetDetail(d)
+	dv.JumpToTop() // should not panic
+}
+
+func TestDetailView_JumpToBottom_NoRelations_IsNoop(t *testing.T) {
+	dv := NewDetailView()
+	dv.JumpToBottom() // no detail set, should not panic
+}
+
+func TestDetailView_ImplementsJumper(t *testing.T) {
+	var _ Jumper = NewDetailView()
+}
+
 var errTest = errForTest("test error")
 
 type errForTest string
