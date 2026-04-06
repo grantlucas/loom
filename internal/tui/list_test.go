@@ -71,6 +71,9 @@ func TestListView_InfoLineView_ShowsActiveFilter(t *testing.T) {
 	if !strings.Contains(info, "login") {
 		t.Errorf("expected active filter text in InfoLineView, got: %q", info)
 	}
+	if !strings.Contains(info, "1 of 2") {
+		t.Errorf("expected '1 of 2' count in InfoLineView, got: %q", info)
+	}
 	if !strings.Contains(info, "esc to clear") {
 		t.Errorf("expected 'esc to clear' hint in InfoLineView, got: %q", info)
 	}

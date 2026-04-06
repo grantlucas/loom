@@ -327,7 +327,7 @@ func (v *ListView) InfoLineView() string {
 	}
 	if v.filterText != "" {
 		return infoLineStyle.Render(
-			fmt.Sprintf("Filter: %s  (%s)", v.filterText, "esc to clear"),
+			fmt.Sprintf("Filter: %s  %s  (esc to clear)", v.filterText, v.StatusInfo()),
 		)
 	}
 	return ""
