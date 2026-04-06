@@ -30,7 +30,7 @@ var tabNames = [...]string{
 	TabTree:      "Tree",
 }
 
-var allTabs = []Tab{TabDashboard, TabIssues, TabDetail, TabTree}
+var allTabs = []Tab{TabDashboard, TabIssues, TabTree}
 
 // String returns the display name for a tab.
 func (t Tab) String() string {

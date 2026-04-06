@@ -237,12 +237,18 @@ func TestApp_ViewRendersTabBar(t *testing.T) {
 	app := newTestApp()
 	view := app.View()
 
-	// All tab labels should appear in the output
-	tabs := []string{"Dashboard", "Issues", "Detail", "Tree"}
+	// Navigable tab labels should appear in the output
+	tabs := []string{"Dashboard", "Issues", "Tree"}
 	for _, tab := range tabs {
 		if !strings.Contains(view, tab) {
 			t.Errorf("expected view to contain tab label %q", tab)
 		}
+	}
+
+	// Detail tab should NOT appear in the tab bar (it's only reachable via Enter)
+	tabBar := strings.SplitN(view, "\n", 2)[0]
+	if strings.Contains(tabBar, "Detail") {
+		t.Error("Detail tab should not appear in the tab bar")
 	}
 }
 
