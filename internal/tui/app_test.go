@@ -1165,195 +1165,18 @@ func TestApp_RenderBreadcrumb_EmptyOnDetailNoHistory(t *testing.T) {
 	}
 }
 
-func TestApp_GotoMode_DefaultOff(t *testing.T) {
-	app := newTestApp()
-	if app.gotoMode {
-		t.Error("goto mode should be off by default")
-	}
-}
-
-func TestApp_GKey_EntersGotoMode(t *testing.T) {
-	app := newTestApp()
-	model, _ := app.Update(keyMsg('g'))
-	a := model.(App)
-	if !a.gotoMode {
-		t.Error("expected goto mode on after pressing g")
-	}
-}
-
-func TestApp_GotoMode_EscCancels(t *testing.T) {
-	app := newTestApp()
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-
-	model, _ = app.Update(escKeyMsg())
-	app = model.(App)
-	if app.gotoMode {
-		t.Error("expected goto mode off after Esc")
-	}
-}
-
-func TestApp_GotoMode_EnterWithID_Navigates(t *testing.T) {
-	detail := &datasource.IssueDetail{ID: "goto-1", Title: "Found"}
-	ds := &mockDataSource{detail: detail}
-	app := newTestAppWithDS(ds)
-
-	// Enter goto mode
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-
-	// Type issue ID
-	for _, r := range "goto-1" {
-		model, _ = app.Update(keyMsg(r))
-		app = model.(App)
-	}
-
-	// Submit
-	model, cmd := app.Update(enterKeyMsg())
-	app = model.(App)
-
-	if app.gotoMode {
-		t.Error("expected goto mode off after submit")
-	}
-	if app.activeTab != TabDetail {
-		t.Error("expected to switch to detail tab")
-	}
-	if cmd == nil {
-		t.Fatal("expected fetch command")
-	}
-	msg := cmd()
-	if loaded, ok := msg.(IssueDetailLoadedMsg); !ok || loaded.Detail.ID != "goto-1" {
-		t.Error("expected fetch for goto-1")
-	}
-}
-
-func TestApp_GotoMode_EnterEmpty_IsNoop(t *testing.T) {
-	app := newTestApp()
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-
-	model, cmd := app.Update(enterKeyMsg())
-	app = model.(App)
-	if app.gotoMode {
-		t.Error("expected goto mode off")
-	}
-	if cmd != nil {
-		t.Error("expected nil cmd for empty input")
-	}
-}
-
-func TestApp_GotoMode_BlocksGlobalKeys(t *testing.T) {
-	app := newTestApp()
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-
-	// Press 'q' — should NOT quit, should type into input
-	model, cmd := app.Update(keyMsg('q'))
-	app = model.(App)
-	if app.gotoMode != true {
-		t.Error("expected to stay in goto mode")
-	}
-	if cmd != nil {
-		// If cmd is tea.Quit, that would be wrong
-		msg := cmd()
-		if _, ok := msg.(tea.QuitMsg); ok {
-			t.Error("q should not trigger quit in goto mode")
-		}
-	}
-}
-
-func TestApp_GotoMode_SetsLoading(t *testing.T) {
-	ds := &mockDataSource{detail: &datasource.IssueDetail{ID: "g-1"}}
-	app := newTestAppWithDS(ds)
-
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-	for _, r := range "g-1" {
-		model, _ = app.Update(keyMsg(r))
-		app = model.(App)
-	}
-	model, _ = app.Update(enterKeyMsg())
-	app = model.(App)
-
-	dv := app.views[TabDetail].(*DetailView)
-	if !dv.loading {
-		t.Error("expected loading state after goto submit")
-	}
-}
-
-func TestApp_GotoMode_FromDetail_PushesHistory(t *testing.T) {
-	ds := &mockDataSource{detail: &datasource.IssueDetail{ID: "g-2"}}
-	app := newTestAppWithDS(ds)
-	app.activeTab = TabDetail
-	dv := app.views[TabDetail].(*DetailView)
-	dv.SetDetail(&datasource.IssueDetail{ID: "current-1", Title: "Current"})
-
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-	for _, r := range "g-2" {
-		model, _ = app.Update(keyMsg(r))
-		app = model.(App)
-	}
-	model, _ = app.Update(enterKeyMsg())
-	app = model.(App)
-
-	if len(app.history) != 1 || app.history[0] != "current-1" {
-		t.Errorf("expected history [current-1], got %v", app.history)
-	}
-}
-
-func TestApp_GotoMode_FromNonDetail_ClearsHistory(t *testing.T) {
-	ds := &mockDataSource{detail: &datasource.IssueDetail{ID: "g-3"}}
-	app := newTestAppWithDS(ds)
-	app.activeTab = TabIssues
-	app.history = []string{"old-1"}
-
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-	for _, r := range "g-3" {
-		model, _ = app.Update(keyMsg(r))
-		app = model.(App)
-	}
-	model, _ = app.Update(enterKeyMsg())
-	app = model.(App)
-
-	if len(app.history) != 0 {
-		t.Errorf("expected history cleared, got %v", app.history)
-	}
-}
-
-func TestApp_GotoMode_View_ShowsPrompt(t *testing.T) {
-	app := newTestApp()
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-
-	view := app.View()
-	if !strings.Contains(view, "Go to:") {
-		t.Error("expected 'Go to:' prompt in view during goto mode")
-	}
-}
-
-func TestApp_GotoMode_View_HidesNormalContent(t *testing.T) {
-	app := newTestApp()
-	stub := &stubView{content: "normal content"}
-	app.views[TabDashboard] = stub
-
-	model, _ := app.Update(keyMsg('g'))
-	app = model.(App)
-	app.views[TabDashboard] = stub
-
-	view := app.View()
-	if strings.Contains(view, "normal content") {
-		t.Error("expected normal content to be hidden during goto mode")
-	}
-}
-
-func TestApp_HelpOverlay_ShowsGoto(t *testing.T) {
+func TestApp_HelpOverlay_ShowsGgAndG(t *testing.T) {
 	app := newTestApp()
 	app.showHelp = true
 	view := app.View()
-	if !strings.Contains(view, "goto") || !strings.Contains(view, "g") {
-		t.Error("help overlay should show goto binding")
+	if !strings.Contains(view, "gg") {
+		t.Error("help overlay should show gg binding")
+	}
+	if !strings.Contains(view, "Jump to top") {
+		t.Error("help overlay should show 'Jump to top' description")
+	}
+	if !strings.Contains(view, "Jump to bottom") {
+		t.Error("help overlay should show 'Jump to bottom' description")
 	}
 }
 
@@ -1882,7 +1705,7 @@ func TestApp_StatusBarPinnedToBottom(t *testing.T) {
 	}
 }
 
-func TestApp_RefreshAndGotoHintsOnAllTabs(t *testing.T) {
+func TestApp_RefreshAndNavHintsOnAllTabs(t *testing.T) {
 	app := loadTestApp(t)
 
 	tabs := []struct {
@@ -1902,8 +1725,8 @@ func TestApp_RefreshAndGotoHintsOnAllTabs(t *testing.T) {
 		if !strings.Contains(view, "refresh") {
 			t.Errorf("expected 'refresh' hint on %s tab", tc.name)
 		}
-		if !strings.Contains(view, "goto") {
-			t.Errorf("expected 'goto' hint on %s tab", tc.name)
+		if !strings.Contains(view, "top/bottom") {
+			t.Errorf("expected 'top/bottom' hint on %s tab", tc.name)
 		}
 	}
 }

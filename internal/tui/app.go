@@ -8,7 +8,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -86,10 +85,8 @@ type App struct {
 	ds        datasource.DataSource
 	interval  time.Duration
 	err       error
-	history   []string
-	gotoMode  bool
-	gotoInput textinput.Model
-	gPending  bool
+	history  []string
+	gPending bool
 	width      int
 	height     int
 	loading    bool
@@ -105,10 +102,6 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		TabDetail:    NewDetailView(),
 		TabTree:      NewTreeView(),
 	}
-	ti := textinput.New()
-	ti.Placeholder = "issue ID"
-	ti.CharLimit = 30
-
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
@@ -119,8 +112,7 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		ds:        ds,
 		interval:  interval,
 		watchMode: watch,
-		gotoInput: ti,
-		loading:   true,
+		loading: true,
 		spinner:   s,
 	}
 }
@@ -237,38 +229,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyMsg:
-		if a.gotoMode {
-			switch msg.Type {
-			case tea.KeyEnter:
-				id := strings.TrimSpace(a.gotoInput.Value())
-				a.gotoMode = false
-				a.gotoInput.Blur()
-				if id == "" {
-					return a, nil
-				}
-				if a.activeTab == TabDetail {
-					if dv, ok := a.views[TabDetail].(*DetailView); ok && dv.detail != nil {
-						a.history = append(a.history, dv.detail.ID)
-					}
-				} else {
-					a.history = nil
-				}
-				a.activeTab = TabDetail
-				if dv, ok := a.views[TabDetail].(*DetailView); ok {
-					dv.SetLoading()
-				}
-				return a, a.fetchIssueDetail(id)
-			case tea.KeyEscape:
-				a.gotoMode = false
-				a.gotoInput.Blur()
-				return a, nil
-			default:
-				var cmd tea.Cmd
-				a.gotoInput, cmd = a.gotoInput.Update(msg)
-				return a, cmd
-			}
-		}
-
 		// If the active view is capturing input, delegate to it directly.
 		if v, ok := a.views[a.activeTab]; ok {
 			if ic, ok := v.(InputCapturer); ok && ic.IsCapturingInput() {
@@ -383,11 +343,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		case key.Matches(msg, a.keys.Quit):
 			return a, tea.Quit
-		case key.Matches(msg, a.keys.Goto):
-			a.gotoMode = true
-			a.gotoInput.Reset()
-			a.gotoInput.Focus()
-			return a, nil
 		}
 	}
 
@@ -405,9 +360,6 @@ func (a App) View() string {
 	b.WriteString("\n")
 	if a.showHelp {
 		b.WriteString(a.renderHelp())
-		b.WriteString("\n")
-	} else if a.gotoMode {
-		b.WriteString(gotoPromptStyle.Render("Go to: ") + a.gotoInput.View())
 		b.WriteString("\n")
 	} else if a.loading {
 		b.WriteString("  " + a.spinner.View() + " Loading...")
@@ -491,7 +443,8 @@ func (a App) renderHelp() string {
 		{"t", "Tree"},
 		{"enter", "Open detail"},
 		{"esc", "Back"},
-		{"g", "goto issue"},
+		{"gg", "Jump to top"},
+		{"G", "Jump to bottom"},
 	}))
 	b.WriteString("\n")
 
@@ -578,12 +531,6 @@ func (a App) renderTabBar() string {
 }
 
 func (a App) globalHints() []StatusHint {
-	if a.gotoMode {
-		return []StatusHint{
-			{Key: "enter", Desc: "go"},
-			{Key: "esc", Desc: "cancel"},
-		}
-	}
 	if a.showHelp {
 		return []StatusHint{
 			{Key: "?", Desc: "close help"},
@@ -592,7 +539,7 @@ func (a App) globalHints() []StatusHint {
 	}
 	return []StatusHint{
 		{Key: "r", Desc: "refresh"},
-		{Key: "g", Desc: "goto"},
+		{Key: "gg/G", Desc: "top/bottom"},
 		{Key: "?", Desc: "help"},
 		{Key: "q", Desc: "quit"},
 	}

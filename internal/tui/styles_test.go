@@ -90,12 +90,6 @@ func TestBreadcrumbStyle_HasForegroundColor(t *testing.T) {
 	}
 }
 
-func TestGotoPromptStyle_IsBold(t *testing.T) {
-	if !gotoPromptStyle.GetBold() {
-		t.Error("goto prompt style should be bold")
-	}
-}
-
 func TestDashboardBarStyle_HasForegroundColor(t *testing.T) {
 	fg := dashboardBarStyle.GetForeground()
 	if fg == (lipgloss.NoColor{}) {
