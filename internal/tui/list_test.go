@@ -27,7 +27,11 @@ func TestListView_RendersColumnHeaders(t *testing.T) {
 	}
 }
 
-func TestListView_ShowsIssueCount(t *testing.T) {
+func TestListView_ImplementsStatusInfoer(t *testing.T) {
+	var _ StatusInfoer = NewListView()
+}
+
+func TestListView_StatusInfo_ShowsCount(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
 		{ID: "a-1", Title: "First"},
@@ -35,24 +39,41 @@ func TestListView_ShowsIssueCount(t *testing.T) {
 		{ID: "a-3", Title: "Third"},
 	})
 
-	view := lv.View()
-	if !strings.Contains(view, "3 issues") {
-		t.Errorf("expected view to contain '3 issues', got:\n%s", view)
+	info := lv.StatusInfo()
+	if !strings.Contains(info, "3 issues") {
+		t.Errorf("expected StatusInfo to contain '3 issues', got: %q", info)
 	}
 }
 
-func TestListView_ShowsIssueCountSingular(t *testing.T) {
+func TestListView_StatusInfo_ShowsCountSingular(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
 		{ID: "a-1", Title: "Only one"},
 	})
 
-	view := lv.View()
-	if !strings.Contains(view, "1 issue") {
-		t.Errorf("expected view to contain '1 issue', got:\n%s", view)
+	info := lv.StatusInfo()
+	if !strings.Contains(info, "1 issue") {
+		t.Errorf("expected StatusInfo to contain '1 issue', got: %q", info)
 	}
-	if strings.Contains(view, "1 issues") {
+	if strings.Contains(info, "1 issues") {
 		t.Error("should use singular 'issue' not 'issues'")
+	}
+}
+
+func TestListView_StatusInfo_ShowsFilteredCount(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "First", Status: "open"},
+		{ID: "a-2", Title: "Second", Status: "open"},
+		{ID: "a-3", Title: "Third", Status: "closed"},
+	})
+	lv.hideClosed = false
+	lv.filterText = "status:open"
+	lv.applyFilter()
+
+	info := lv.StatusInfo()
+	if !strings.Contains(info, "2 of 3") {
+		t.Errorf("expected StatusInfo to contain '2 of 3', got: %q", info)
 	}
 }
 
@@ -345,8 +366,8 @@ func TestListView_EscExitsFilterMode(t *testing.T) {
 		t.Error("expected filter prompt to be hidden after Esc")
 	}
 	// Should show all issues (no filter active)
-	if !strings.Contains(view, "2 issues") {
-		t.Errorf("expected '2 issues' after Esc clears filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "2 issues") {
+		t.Errorf("expected '2 issues' after Esc clears filter, got: %q", lv.StatusInfo())
 	}
 }
 
@@ -364,8 +385,8 @@ func TestListView_FreetextFilterMatchesTitleAndID(t *testing.T) {
 
 	view := lv.View()
 	// Should show 2 of 3 (both login-related issues)
-	if !strings.Contains(view, "2 of 3") {
-		t.Errorf("expected '2 of 3' in filtered view, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "2 of 3") {
+		t.Errorf("expected '2 of 3' in StatusInfo, got: %q", lv.StatusInfo())
 	}
 	if !strings.Contains(view, "loom-1") {
 		t.Error("expected loom-1 (Fix login bug) in filtered results")
@@ -389,12 +410,12 @@ func TestListView_FilteredStatusBarSingular(t *testing.T) {
 	typeText(lv, "unique")
 	lv.Update(enterKey())
 
-	view := lv.View()
-	if !strings.Contains(view, "1 of 2 issue") {
-		t.Errorf("expected '1 of 2 issue' (singular), got:\n%s", view)
+	info := lv.StatusInfo()
+	if !strings.Contains(info, "1 of 2 issue") {
+		t.Errorf("expected '1 of 2 issue' (singular), got: %q", info)
 	}
 	// Must not say "issues" (plural)
-	if strings.Contains(view, "1 of 2 issues") {
+	if strings.Contains(info, "1 of 2 issues") {
 		t.Error("expected singular 'issue' not 'issues' for 1 result")
 	}
 }
@@ -412,8 +433,8 @@ func TestListView_FilterByStatus(t *testing.T) {
 	lv.Update(enterKey())
 
 	view := lv.View()
-	if !strings.Contains(view, "1 of 3") {
-		t.Errorf("expected '1 of 3' for status:open filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "1 of 3") {
+		t.Errorf("expected '1 of 3' for status:open filter, got: %q", lv.StatusInfo())
 	}
 	if !strings.Contains(view, "a-1") {
 		t.Error("expected a-1 (open) in filtered results")
@@ -436,8 +457,8 @@ func TestListView_FilterByPriority(t *testing.T) {
 	lv.Update(enterKey())
 
 	view := lv.View()
-	if !strings.Contains(view, "1 of 3") {
-		t.Errorf("expected '1 of 3' for priority:2 filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "1 of 3") {
+		t.Errorf("expected '1 of 3' for priority:2 filter, got: %q", lv.StatusInfo())
 	}
 	if !strings.Contains(view, "a-2") {
 		t.Error("expected a-2 (priority 2) in results")
@@ -456,8 +477,8 @@ func TestListView_FilterByType(t *testing.T) {
 	lv.Update(enterKey())
 
 	view := lv.View()
-	if !strings.Contains(view, "1 of 2") {
-		t.Errorf("expected '1 of 2' for type:bug filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "1 of 2") {
+		t.Errorf("expected '1 of 2' for type:bug filter, got: %q", lv.StatusInfo())
 	}
 	if !strings.Contains(view, "a-1") {
 		t.Error("expected a-1 (bug) in results")
@@ -476,8 +497,8 @@ func TestListView_FilterByAssignee(t *testing.T) {
 	lv.Update(enterKey())
 
 	view := lv.View()
-	if !strings.Contains(view, "1 of 2") {
-		t.Errorf("expected '1 of 2' for assignee:alice filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "1 of 2") {
+		t.Errorf("expected '1 of 2' for assignee:alice filter, got: %q", lv.StatusInfo())
 	}
 	if !strings.Contains(view, "a-1") {
 		t.Error("expected a-1 (alice) in results")
@@ -500,8 +521,8 @@ func TestListView_ComposableFilters(t *testing.T) {
 	lv.Update(enterKey())
 
 	view := lv.View()
-	if !strings.Contains(view, "1 of 3") {
-		t.Errorf("expected '1 of 3' for composable filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "1 of 3") {
+		t.Errorf("expected '1 of 3' for composable filter, got: %q", lv.StatusInfo())
 	}
 	if !strings.Contains(view, "a-1") {
 		t.Error("expected a-1 (open + P1) in results")
@@ -527,8 +548,8 @@ func TestListView_MixedFieldAndFreetext(t *testing.T) {
 	lv.Update(enterKey())
 
 	view := lv.View()
-	if !strings.Contains(view, "1 of 3") {
-		t.Errorf("expected '1 of 3' for mixed filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "1 of 3") {
+		t.Errorf("expected '1 of 3' for mixed filter, got: %q", lv.StatusInfo())
 	}
 	if !strings.Contains(view, "a-1") {
 		t.Error("expected a-1 (open + login) in results")
@@ -560,10 +581,9 @@ func TestListView_SetIssuesReappliesActiveFilter(t *testing.T) {
 		{ID: "a-3", Title: "Login v2", Status: "open"},
 	})
 
-	view := lv.View()
 	// Filter should still be active, now matching 2 of 3
-	if !strings.Contains(view, "2 of 3") {
-		t.Errorf("expected '2 of 3' after SetIssues with active filter, got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "2 of 3") {
+		t.Errorf("expected '2 of 3' after SetIssues with active filter, got: %q", lv.StatusInfo())
 	}
 }
 
@@ -686,8 +706,8 @@ func TestListView_HidesClosedByDefault(t *testing.T) {
 	if !strings.Contains(view, "a-2") {
 		t.Error("expected in_progress issue a-2 to be visible")
 	}
-	if !strings.Contains(view, "2 of 3") {
-		t.Errorf("expected '2 of 3' count (closed hidden), got:\n%s", view)
+	if !strings.Contains(lv.StatusInfo(), "2 of 3") {
+		t.Errorf("expected '2 of 3' count (closed hidden), got: %q", lv.StatusInfo())
 	}
 }
 

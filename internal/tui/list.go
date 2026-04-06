@@ -314,12 +314,8 @@ func (v *ListView) StatusHints() []StatusHint {
 	return hints
 }
 
-// View renders the issue list table.
-func (v *ListView) View() string {
-	var status string
-	if v.filterMode {
-		return v.table.View() + "\n" + filterPromptStyle.Render("Filter: ") + v.filterInput.View()
-	}
+// StatusInfo returns contextual info for the secondary status line.
+func (v *ListView) StatusInfo() string {
 	displayed := len(v.displayIssues())
 	total := len(v.issues)
 	if v.filterText != "" || v.hideClosed {
@@ -327,15 +323,21 @@ func (v *ListView) View() string {
 		if displayed == 1 {
 			label = "issue"
 		}
-		status = statusBarStyle.Render(fmt.Sprintf("%d of %d %s", displayed, total, label))
-	} else {
-		label := "issues"
-		if total == 1 {
-			label = "issue"
-		}
-		status = statusBarStyle.Render(fmt.Sprintf("%d %s", total, label))
+		return fmt.Sprintf("%d of %d %s", displayed, total, label)
 	}
-	return v.table.View() + "\n" + status
+	label := "issues"
+	if total == 1 {
+		label = "issue"
+	}
+	return fmt.Sprintf("%d %s", total, label)
+}
+
+// View renders the issue list table.
+func (v *ListView) View() string {
+	if v.filterMode {
+		return v.table.View() + "\n" + filterPromptStyle.Render("Filter: ") + v.filterInput.View()
+	}
+	return v.table.View()
 }
 
 // Fixed column widths for non-Title columns.
