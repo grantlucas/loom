@@ -446,6 +446,7 @@ func (a App) renderHelp() string {
 		viewEntries = []entry{
 			{"s", "Cycle sort column"},
 			{"/", "Filter issues"},
+			{"c", "Toggle closed issues"},
 		}
 	case TabTree:
 		viewEntries = []entry{

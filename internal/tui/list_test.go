@@ -721,6 +721,31 @@ func TestListView_StatusHints_ShowsClosedToggle(t *testing.T) {
 	}
 }
 
+func TestListView_HideClosedCombinesWithFilter(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Login bug", Status: "open"},
+		{ID: "a-2", Title: "Login fix", Status: "closed"},
+		{ID: "a-3", Title: "Dashboard", Status: "open"},
+	})
+
+	// Filter for "login" — with hideClosed on, should only show a-1
+	enterFilterMode(lv)
+	typeText(lv, "login")
+	lv.Update(enterKey())
+
+	view := lv.View()
+	if !strings.Contains(view, "a-1") {
+		t.Error("expected a-1 (open + login) visible")
+	}
+	if strings.Contains(view, "a-2") {
+		t.Error("expected a-2 (closed + login) hidden")
+	}
+	if strings.Contains(view, "a-3") {
+		t.Error("expected a-3 (open but no login) filtered out")
+	}
+}
+
 func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
 	lv := NewListView()
 	lv.Resize(40, 30) // very narrow
