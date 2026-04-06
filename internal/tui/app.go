@@ -21,20 +21,16 @@ const (
 	TabIssues
 	TabDetail
 	TabTree
-	TabCriticalPath
-	TabFocus
 )
 
 var tabNames = [...]string{
-	TabDashboard:    "Dashboard",
-	TabIssues:       "Issues",
-	TabDetail:       "Detail",
-	TabTree:         "Tree",
-	TabCriticalPath: "Critical Path",
-	TabFocus:        "Focus",
+	TabDashboard: "Dashboard",
+	TabIssues:    "Issues",
+	TabDetail:    "Detail",
+	TabTree:      "Tree",
 }
 
-var allTabs = []Tab{TabDashboard, TabIssues, TabDetail, TabTree, TabCriticalPath, TabFocus}
+var allTabs = []Tab{TabDashboard, TabIssues, TabDetail, TabTree}
 
 // String returns the display name for a tab.
 func (t Tab) String() string {
@@ -45,12 +41,10 @@ func (t Tab) String() string {
 }
 
 var tabShortcuts = [...]string{
-	TabDashboard:    "d",
-	TabIssues:       "i",
-	TabDetail:       "",
-	TabTree:         "t",
-	TabCriticalPath: "c",
-	TabFocus:        "f",
+	TabDashboard: "d",
+	TabIssues:    "i",
+	TabDetail:    "",
+	TabTree:      "t",
 }
 
 // Shortcut returns the keyboard shortcut key for a tab, or empty string if none.
@@ -89,12 +83,10 @@ type App struct {
 // NewApp creates a new App wired to the given DataSource.
 func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 	views := map[Tab]View{
-		TabDashboard:    NewDashboardView(),
-		TabIssues:       NewListView(),
-		TabDetail:       NewDetailView(),
-		TabTree:         NewTreeView(),
-		TabCriticalPath: NewCriticalPathView(),
-		TabFocus:        NewFocusView(),
+		TabDashboard: NewDashboardView(),
+		TabIssues:    NewListView(),
+		TabDetail:    NewDetailView(),
+		TabTree:      NewTreeView(),
 	}
 	ti := textinput.New()
 	ti.Placeholder = "issue ID"
@@ -171,20 +163,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if tv, ok := a.views[TabTree].(*TreeView); ok {
 			tv.SetIssues(msg.Issues)
 		}
-		if cpv, ok := a.views[TabCriticalPath].(*CriticalPathView); ok {
-			cpv.SetIssues(msg.Issues)
-		}
-		if fv, ok := a.views[TabFocus].(*FocusView); ok {
-			fv.SetIssues(msg.Issues)
-		}
 		return a, nil
 
 	case ReadyLoadedMsg:
 		if dv, ok := a.views[TabDashboard].(*DashboardView); ok {
 			dv.SetReady(msg.Issues)
-		}
-		if fv, ok := a.views[TabFocus].(*FocusView); ok {
-			fv.SetReady(msg.Issues)
 		}
 		return a, nil
 
@@ -266,12 +249,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Tree):
 			a.activeTab = TabTree
 			return a, nil
-		case key.Matches(msg, a.keys.CriticalPath):
-			a.activeTab = TabCriticalPath
-			return a, nil
-		case key.Matches(msg, a.keys.Focus):
-			a.activeTab = TabFocus
-			return a, nil
 		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabIssues:
 			if lv, ok := a.views[TabIssues].(*ListView); ok {
 				id := lv.SelectedIssueID()
@@ -289,34 +266,6 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabTree:
 			if tv, ok := a.views[TabTree].(*TreeView); ok {
 				id := tv.SelectedNodeID()
-				if id == "" {
-					return a, nil
-				}
-				a.history = nil
-				a.activeTab = TabDetail
-				if dv, ok := a.views[TabDetail].(*DetailView); ok {
-					dv.SetLoading()
-				}
-				return a, a.fetchIssueDetail(id)
-			}
-			return a, nil
-		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabCriticalPath:
-			if cpv, ok := a.views[TabCriticalPath].(*CriticalPathView); ok {
-				id := cpv.SelectedNodeID()
-				if id == "" {
-					return a, nil
-				}
-				a.history = nil
-				a.activeTab = TabDetail
-				if dv, ok := a.views[TabDetail].(*DetailView); ok {
-					dv.SetLoading()
-				}
-				return a, a.fetchIssueDetail(id)
-			}
-			return a, nil
-		case key.Matches(msg, a.keys.Enter) && a.activeTab == TabFocus:
-			if fv, ok := a.views[TabFocus].(*FocusView); ok {
-				id := fv.SelectedNodeID()
 				if id == "" {
 					return a, nil
 				}
@@ -439,8 +388,6 @@ func (a App) renderHelp() string {
 		{"d", "Dashboard"},
 		{"i", "Issues"},
 		{"t", "Tree"},
-		{"c", "Critical Path"},
-		{"f", "Focus"},
 		{"enter", "Open detail"},
 		{"esc", "Back"},
 		{"g", "goto issue"},
@@ -469,18 +416,6 @@ func (a App) renderHelp() string {
 			{"j/k", "Move cursor"},
 			{"e", "expand node"},
 			{"c", "Collapse node"},
-		}
-	case TabCriticalPath:
-		viewEntries = []entry{
-			{"j/k", "Move cursor"},
-			{"l", "Sort by length"},
-			{"p", "Sort by priority"},
-		}
-	case TabFocus:
-		viewEntries = []entry{
-			{"j/k", "Move cursor"},
-			{"s", "Cycle sort mode"},
-			{"e", "Toggle expand"},
 		}
 	case TabDetail:
 		viewEntries = []entry{
