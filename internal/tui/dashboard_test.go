@@ -479,3 +479,40 @@ func TestDashboardView_Resize_BarWidthScalesWithTerminal(t *testing.T) {
 			bars160, bars80)
 	}
 }
+
+func TestDashboardView_ImplementsStatusInfoer(t *testing.T) {
+	var _ StatusInfoer = NewDashboardView()
+}
+
+func TestDashboardView_StatusInfo_ShowsCount(t *testing.T) {
+	dv := NewDashboardView()
+	dv.SetIssues([]datasource.Issue{
+		{ID: "a-1"},
+		{ID: "a-2"},
+		{ID: "a-3"},
+	})
+	info := dv.StatusInfo()
+	if !strings.Contains(info, "3 issues") {
+		t.Errorf("expected '3 issues', got: %q", info)
+	}
+}
+
+func TestDashboardView_StatusInfo_NoIssues(t *testing.T) {
+	dv := NewDashboardView()
+	info := dv.StatusInfo()
+	if info != "" {
+		t.Errorf("expected empty StatusInfo with no issues, got: %q", info)
+	}
+}
+
+func TestDashboardView_StatusInfo_Singular(t *testing.T) {
+	dv := NewDashboardView()
+	dv.SetIssues([]datasource.Issue{{ID: "a-1"}})
+	info := dv.StatusInfo()
+	if !strings.Contains(info, "1 issue") {
+		t.Errorf("expected '1 issue', got: %q", info)
+	}
+	if strings.Contains(info, "1 issues") {
+		t.Error("should use singular 'issue' not 'issues'")
+	}
+}

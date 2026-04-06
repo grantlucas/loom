@@ -444,3 +444,28 @@ func TestTreeView_Resize_AdaptsTitleTruncation(t *testing.T) {
 			len(out120), len(out60))
 	}
 }
+
+func TestTreeView_ImplementsStatusInfoer(t *testing.T) {
+	var _ StatusInfoer = NewTreeView()
+}
+
+func TestTreeView_StatusInfo_ShowsNodeCount(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{
+		{ID: "a-1"},
+		{ID: "a-2"},
+		{ID: "a-3"},
+	})
+	info := tv.StatusInfo()
+	if !strings.Contains(info, "3 nodes") {
+		t.Errorf("expected '3 nodes', got: %q", info)
+	}
+}
+
+func TestTreeView_StatusInfo_NoIssues(t *testing.T) {
+	tv := NewTreeView()
+	info := tv.StatusInfo()
+	if info != "" {
+		t.Errorf("expected empty StatusInfo with no issues, got: %q", info)
+	}
+}

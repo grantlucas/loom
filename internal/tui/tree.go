@@ -58,6 +58,21 @@ func NewTreeView() *TreeView {
 	}
 }
 
+// StatusInfo returns contextual info for the secondary status line.
+func (tv *TreeView) StatusInfo() string {
+	n := len(tv.issues)
+	if n == 0 {
+		return ""
+	}
+	var roots int
+	if tv.rootID != "" {
+		roots = 1
+	} else if tv.dag != nil {
+		roots = len(tv.dag.Roots())
+	}
+	return fmt.Sprintf("%d nodes, %d roots", n, roots)
+}
+
 // StatusHints returns contextual key hints for the status bar.
 func (tv *TreeView) StatusHints() []StatusHint {
 	return []StatusHint{

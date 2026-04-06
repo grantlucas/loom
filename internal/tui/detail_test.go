@@ -651,3 +651,33 @@ func TestDetailView_View_ShortDescriptionUnchanged(t *testing.T) {
 		t.Error("expected short description to appear unchanged in content")
 	}
 }
+
+func TestDetailView_ImplementsStatusInfoer(t *testing.T) {
+	var _ StatusInfoer = NewDetailView()
+}
+
+func TestDetailView_StatusInfo_ShowsIssueID(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetDetail(&datasource.IssueDetail{ID: "loom-42", Title: "Test"})
+	info := dv.StatusInfo()
+	if !strings.Contains(info, "loom-42") {
+		t.Errorf("expected 'loom-42' in StatusInfo, got: %q", info)
+	}
+}
+
+func TestDetailView_StatusInfo_Loading(t *testing.T) {
+	dv := NewDetailView()
+	dv.SetLoading()
+	info := dv.StatusInfo()
+	if info != "" {
+		t.Errorf("expected empty StatusInfo while loading, got: %q", info)
+	}
+}
+
+func TestDetailView_StatusInfo_NoIssue(t *testing.T) {
+	dv := NewDetailView()
+	info := dv.StatusInfo()
+	if info != "" {
+		t.Errorf("expected empty StatusInfo with no issue, got: %q", info)
+	}
+}

@@ -48,6 +48,14 @@ func (v *DetailView) SetError(err error) {
 	v.loading = false
 }
 
+// StatusInfo returns contextual info for the secondary status line.
+func (v *DetailView) StatusInfo() string {
+	if v.detail == nil {
+		return ""
+	}
+	return v.detail.ID
+}
+
 // StatusHints returns contextual key hints for the status bar.
 func (v *DetailView) StatusHints() []StatusHint {
 	return []StatusHint{

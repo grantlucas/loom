@@ -54,6 +54,19 @@ func (d *DashboardView) StatusHints() []StatusHint {
 	return nil
 }
 
+// StatusInfo returns contextual info for the secondary status line.
+func (d *DashboardView) StatusInfo() string {
+	n := len(d.issues)
+	if n == 0 {
+		return ""
+	}
+	label := "issues"
+	if n == 1 {
+		label = "issue"
+	}
+	return fmt.Sprintf("%d %s", n, label)
+}
+
 // Update handles messages. The dashboard has no interactive elements.
 func (d *DashboardView) Update(_ tea.Msg) tea.Cmd {
 	return nil
