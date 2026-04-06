@@ -1774,6 +1774,31 @@ func TestApp_HeightAccountsForStatusBar(t *testing.T) {
 	}
 }
 
+func TestApp_StatusBarPinnedToBottom(t *testing.T) {
+	app := loadTestApp(t)
+
+	view := app.View()
+	lines := strings.Split(view, "\n")
+
+	// The last non-empty line should contain the status bar hints
+	lastLine := ""
+	for i := len(lines) - 1; i >= 0; i-- {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed != "" {
+			lastLine = lines[i]
+			break
+		}
+	}
+	if !strings.Contains(lastLine, "help") {
+		t.Errorf("expected status bar on last line, got: %q", lastLine)
+	}
+
+	// Total output should be exactly height lines (pinned layout)
+	if len(lines) != 30 {
+		t.Errorf("expected exactly 30 lines (terminal height), got %d", len(lines))
+	}
+}
+
 func TestApp_FilterMode_BlocksGlobalKeys(t *testing.T) {
 	app := newTestApp()
 	// Switch to Issues tab

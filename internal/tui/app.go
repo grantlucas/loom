@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/grantlucas/loom/internal/datasource"
 )
@@ -372,17 +373,24 @@ func (a App) View() string {
 		}
 	}
 
-	// Status bar
+	// Status bar — pinned to bottom
 	hints := a.globalHints()
 	if v, ok := a.views[a.activeTab]; ok {
 		if sh, ok := v.(StatusHinter); ok {
 			hints = append(sh.StatusHints(), hints...)
 		}
 	}
-	b.WriteString("\n")
-	b.WriteString(renderStatusBar(hints, a.width))
+	statusBar := renderStatusBar(hints, a.width)
 
-	return b.String()
+	content := b.String()
+	if a.height <= 0 {
+		return content + "\n" + statusBar
+	}
+
+	// Place content at top, then pin status bar on the last line
+	contentHeight := a.height - 1 // reserve 1 line for status bar
+	placed := lipgloss.PlaceVertical(contentHeight, lipgloss.Top, content)
+	return placed + "\n" + statusBar
 }
 
 func (a App) renderBreadcrumb() string {
