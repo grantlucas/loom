@@ -691,6 +691,36 @@ func TestListView_ToggleClosedWithCKey(t *testing.T) {
 	}
 }
 
+func TestListView_StatusHints_ShowsClosedToggle(t *testing.T) {
+	lv := NewListView()
+
+	// Default: closed hidden, hint should say "show closed"
+	hints := lv.StatusHints()
+	found := false
+	for _, h := range hints {
+		if h.Key == "c" {
+			found = true
+			if h.Desc != "show closed" {
+				t.Errorf("expected hint 'show closed' when hiding, got %q", h.Desc)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected 'c' hint in status hints")
+	}
+
+	// Toggle: now showing closed, hint should say "hide closed"
+	lv.Update(keyMsg('c'))
+	hints = lv.StatusHints()
+	for _, h := range hints {
+		if h.Key == "c" {
+			if h.Desc != "hide closed" {
+				t.Errorf("expected hint 'hide closed' when showing, got %q", h.Desc)
+			}
+		}
+	}
+}
+
 func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
 	lv := NewListView()
 	lv.Resize(40, 30) // very narrow

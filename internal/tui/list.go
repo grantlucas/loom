@@ -283,9 +283,14 @@ func (v *ListView) StatusHints() []StatusHint {
 			{Key: "esc", Desc: "cancel"},
 		}
 	}
+	closedDesc := "show closed"
+	if !v.hideClosed {
+		closedDesc = "hide closed"
+	}
 	hints := []StatusHint{
 		{Key: "s", Desc: "sort"},
 		{Key: "/", Desc: "filter"},
+		{Key: "c", Desc: closedDesc},
 		{Key: "enter", Desc: "open"},
 	}
 	if v.filterText != "" {
