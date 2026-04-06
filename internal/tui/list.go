@@ -41,6 +41,7 @@ type ListView struct {
 	filterMode  bool
 	filterText  string
 	filterInput textinput.Model
+	hideClosed  bool
 	width       int
 	height      int
 }
@@ -70,6 +71,7 @@ func NewListView() *ListView {
 		sortCol:     sortByPriority,
 		sortKey:     key.NewBinding(key.WithKeys("s")),
 		filterInput: fi,
+		hideClosed:  true,
 	}
 }
 
@@ -293,21 +295,20 @@ func (v *ListView) View() string {
 	if v.filterMode {
 		return v.table.View() + "\n" + filterPromptStyle.Render("Filter: ") + v.filterInput.View()
 	}
-	if v.filterText != "" {
-		displayed := len(v.displayIssues())
-		total := len(v.issues)
+	displayed := len(v.displayIssues())
+	total := len(v.issues)
+	if v.filterText != "" || v.hideClosed {
 		label := "issues"
 		if displayed == 1 {
 			label = "issue"
 		}
 		status = statusBarStyle.Render(fmt.Sprintf("%d of %d %s", displayed, total, label))
 	} else {
-		count := len(v.issues)
 		label := "issues"
-		if count == 1 {
+		if total == 1 {
 			label = "issue"
 		}
-		status = statusBarStyle.Render(fmt.Sprintf("%d %s", count, label))
+		status = statusBarStyle.Render(fmt.Sprintf("%d %s", total, label))
 	}
 	return v.table.View() + "\n" + status
 }
@@ -342,8 +343,18 @@ func (v *ListView) Resize(width, height int) {
 }
 
 func (v *ListView) displayIssues() []datasource.Issue {
+	issues := v.issues
 	if v.filtered != nil {
-		return v.filtered
+		issues = v.filtered
 	}
-	return v.issues
+	if v.hideClosed {
+		visible := make([]datasource.Issue, 0, len(issues))
+		for _, issue := range issues {
+			if issue.Status != "closed" {
+				visible = append(visible, issue)
+			}
+		}
+		return visible
+	}
+	return issues
 }

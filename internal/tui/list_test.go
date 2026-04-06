@@ -168,6 +168,7 @@ func TestListView_ReadyIndicator(t *testing.T) {
 
 func TestListView_ClosedIndicator(t *testing.T) {
 	lv := NewListView()
+	lv.hideClosed = false // show closed issues for this test
 	lv.SetIssues([]datasource.Issue{
 		{
 			ID:     "a-1",
@@ -636,6 +637,29 @@ func TestListView_StatusHints_ActiveFilter(t *testing.T) {
 	}
 	if !found {
 		t.Error("expected 'esc' hint when filter is active")
+	}
+}
+
+func TestListView_HidesClosedByDefault(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Open task", Status: "open"},
+		{ID: "a-2", Title: "Active task", Status: "in_progress"},
+		{ID: "a-3", Title: "Done task", Status: "closed"},
+	})
+
+	view := lv.View()
+	if strings.Contains(view, "a-3") {
+		t.Error("expected closed issue a-3 to be hidden by default")
+	}
+	if !strings.Contains(view, "a-1") {
+		t.Error("expected open issue a-1 to be visible")
+	}
+	if !strings.Contains(view, "a-2") {
+		t.Error("expected in_progress issue a-2 to be visible")
+	}
+	if !strings.Contains(view, "2 of 3") {
+		t.Errorf("expected '2 of 3' count (closed hidden), got:\n%s", view)
 	}
 }
 
