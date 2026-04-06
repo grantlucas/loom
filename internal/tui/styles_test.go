@@ -36,12 +36,12 @@ func TestActiveTabStyle_HasBorderWithoutBottom(t *testing.T) {
 	}
 }
 
-func TestInactiveTabStyle_HasFullBorder(t *testing.T) {
+func TestInactiveTabStyle_HasBorderWithoutBottom(t *testing.T) {
 	if !inactiveTabStyle.GetBorderTop() {
 		t.Error("inactive tab style should have a top border")
 	}
-	if !inactiveTabStyle.GetBorderBottom() {
-		t.Error("inactive tab style should have a bottom border")
+	if inactiveTabStyle.GetBorderBottom() {
+		t.Error("inactive tab style should NOT have a bottom border")
 	}
 }
 

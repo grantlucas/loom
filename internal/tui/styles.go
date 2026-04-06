@@ -22,6 +22,7 @@ var (
 				Foreground(lipgloss.Color("243")).
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color("240")).
+				BorderBottom(false).
 				Padding(0, 1)
 
 	// Gap fill line extending from tabs to terminal edge

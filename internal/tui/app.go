@@ -468,31 +468,46 @@ func (a App) renderHelp() string {
 }
 
 func (a App) renderTabBar() string {
-	var tabs []string
-	for _, tab := range allTabs {
+	var rendered []string
+	var widths []int
+	var activeIdx = -1
+
+	for i, tab := range allTabs {
 		label := tab.String()
 		if s := tab.Shortcut(); s != "" {
 			label += " (" + s + ")"
 		}
 		if tab == a.activeTab {
-			tabs = append(tabs, activeTabStyle.Render(label))
+			activeIdx = i
+			rendered = append(rendered, activeTabStyle.Render(label))
 		} else {
-			tabs = append(tabs, inactiveTabStyle.Render(label))
+			rendered = append(rendered, inactiveTabStyle.Render(label))
 		}
+		widths = append(widths, lipgloss.Width(rendered[len(rendered)-1]))
 	}
 	if a.watchMode {
-		tabs = append(tabs, watchIndicatorStyle.Render("WATCH"))
+		rendered = append(rendered, watchIndicatorStyle.Render("WATCH"))
+		widths = append(widths, lipgloss.Width(rendered[len(rendered)-1]))
 	}
-	joined := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 
-	// Fill remaining width with a border line on the bottom row
-	joinedWidth := lipgloss.Width(joined)
-	remaining := a.width - joinedWidth
-	if remaining > 0 {
-		fill := tabGapStyle.Render(strings.Repeat("─", remaining))
-		joined = lipgloss.JoinHorizontal(lipgloss.Bottom, joined, fill)
+	joined := lipgloss.JoinHorizontal(lipgloss.Top, rendered...)
+
+	// Build a bottom line: ─ under inactive tabs, spaces under active tab
+	var bottom strings.Builder
+	for i, w := range widths {
+		if i == activeIdx {
+			bottom.WriteString(strings.Repeat(" ", w))
+		} else {
+			bottom.WriteString(strings.Repeat("─", w))
+		}
 	}
-	return joined
+	// Fill remaining width to terminal edge
+	joinedWidth := lipgloss.Width(joined)
+	if remaining := a.width - joinedWidth; remaining > 0 {
+		bottom.WriteString(strings.Repeat("─", remaining))
+	}
+
+	return joined + "\n" + tabGapStyle.Render(bottom.String())
 }
 
 func (a App) globalHints() []StatusHint {
