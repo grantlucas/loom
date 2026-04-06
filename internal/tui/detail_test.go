@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -491,6 +492,33 @@ func TestDetailView_CursorNavigation_NoRelations(t *testing.T) {
 	dv.Update(keyMsg('k'))
 	if dv.SelectedRelationID() != "" {
 		t.Error("expected empty selection with no relations")
+	}
+}
+
+func TestDetailView_ViewportScrollsToFollowRelationCursor(t *testing.T) {
+	dv := NewDetailView()
+	// Create a detail with many dependents to overflow a small viewport
+	d := testDetail()
+	d.Dependents = make([]datasource.ExpandedRelation, 20)
+	for i := range d.Dependents {
+		d.Dependents[i] = datasource.ExpandedRelation{
+			ID:     fmt.Sprintf("dep-%d", i),
+			Title:  fmt.Sprintf("Dependent %d", i),
+			Status: "open",
+		}
+	}
+	dv.Resize(80, 12) // small viewport: 12 - 3 = 9 content lines
+	dv.SetDetail(d)
+
+	// Move cursor down to last relation (1 dep + 20 dependents = 21 total)
+	for i := 0; i < 20; i++ {
+		dv.Update(keyMsg('j'))
+	}
+
+	// The cursor is on the last dependent, which is far below the viewport.
+	// The viewport should have scrolled down.
+	if dv.viewport.YOffset == 0 {
+		t.Error("viewport should scroll down to keep relation cursor visible")
 	}
 }
 

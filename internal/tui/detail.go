@@ -100,13 +100,13 @@ func (v *DetailView) Update(msg tea.Msg) tea.Cmd {
 				if v.relationCursor < count-1 {
 					v.relationCursor++
 				}
-				v.viewport.SetContent(v.renderContent())
+				v.syncViewport()
 				return nil
 			case key.Matches(kmsg, cursorUp):
 				if v.relationCursor > 0 {
 					v.relationCursor--
 				}
-				v.viewport.SetContent(v.renderContent())
+				v.syncViewport()
 				return nil
 			}
 		}
@@ -114,6 +114,20 @@ func (v *DetailView) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	v.viewport, cmd = v.viewport.Update(msg)
 	return cmd
+}
+
+// syncViewport updates the viewport content and scrolls to keep the relation cursor visible.
+func (v *DetailView) syncViewport() {
+	content := v.renderContent()
+	v.viewport.SetContent(content)
+	// Find the cursor line by scanning for the ">" marker in the rendered content.
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		if strings.Contains(line, "> ") {
+			ensureLineVisible(&v.viewport, i)
+			break
+		}
+	}
 }
 
 // View renders the detail view.
