@@ -56,6 +56,26 @@ func TestListView_InfoLineView_EmptyWhenNotFiltering(t *testing.T) {
 	}
 }
 
+func TestListView_InfoLineView_ShowsActiveFilter(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Login bug", Status: "open"},
+		{ID: "a-2", Title: "Dashboard", Status: "open"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "login")
+	lv.Update(enterKey())
+
+	info := lv.InfoLineView()
+	if !strings.Contains(info, "login") {
+		t.Errorf("expected active filter text in InfoLineView, got: %q", info)
+	}
+	if !strings.Contains(info, "esc to clear") {
+		t.Errorf("expected 'esc to clear' hint in InfoLineView, got: %q", info)
+	}
+}
+
 func TestListView_StatusInfo_ShowsCount(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
@@ -707,7 +727,7 @@ func TestListView_StatusHints_FilterMode(t *testing.T) {
 	}
 }
 
-func TestListView_StatusHints_ActiveFilter(t *testing.T) {
+func TestListView_StatusHints_ActiveFilter_NoEscHint(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
 		{ID: "a-1", Title: "Login"},
@@ -720,15 +740,11 @@ func TestListView_StatusHints_ActiveFilter(t *testing.T) {
 
 	hints := lv.StatusHints()
 
-	// Should have normal hints plus filter-active indicator
-	found := false
+	// "esc to clear" is now in the info bar, not in hints
 	for _, h := range hints {
 		if h.Key == "esc" {
-			found = true
+			t.Error("'esc' hint should not be in StatusHints — it moved to InfoLineView")
 		}
-	}
-	if !found {
-		t.Error("expected 'esc' hint when filter is active")
 	}
 }
 

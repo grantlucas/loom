@@ -311,22 +311,24 @@ func (v *ListView) StatusHints() []StatusHint {
 	if !v.hideClosed {
 		closedDesc = "hide closed"
 	}
-	hints := []StatusHint{
+	return []StatusHint{
 		{Key: "s/S", Desc: "sort/reverse"},
 		{Key: "/", Desc: "filter"},
 		{Key: "c", Desc: closedDesc},
 		{Key: "enter", Desc: "open"},
 	}
-	if v.filterText != "" {
-		hints = append(hints, StatusHint{Key: "esc", Desc: "clear filter"})
-	}
-	return hints
 }
 
-// InfoLineView returns a pre-rendered info line when the filter input is active.
+// InfoLineView returns a pre-rendered info line when the filter input is active
+// or when a filter is applied.
 func (v *ListView) InfoLineView() string {
 	if v.filterMode {
 		return filterPromptStyle.Render("Filter: ") + v.filterInput.View()
+	}
+	if v.filterText != "" {
+		return infoLineStyle.Render(
+			fmt.Sprintf("Filter: %s  (%s)", v.filterText, "esc to clear"),
+		)
 	}
 	return ""
 }
