@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grantlucas/loom/internal/datasource"
@@ -30,6 +31,7 @@ type TreeView struct {
 	cursor    int
 	rootID    string // empty = forest mode
 	width     int
+	viewport  viewport.Model
 	upKey     key.Binding
 	downKey   key.Binding
 	expandKey key.Binding
@@ -73,6 +75,7 @@ func (tv *TreeView) SetIssues(issues []datasource.Issue) {
 	}
 
 	tv.rebuild()
+	tv.syncViewport()
 }
 
 // SetRoot switches to rooted mode showing only the subtree of the given ID.
@@ -80,6 +83,7 @@ func (tv *TreeView) SetRoot(id string) {
 	tv.rootID = id
 	tv.cursor = 0
 	tv.rebuild()
+	tv.syncViewport()
 }
 
 // ClearRoot switches back to forest mode.
@@ -87,6 +91,7 @@ func (tv *TreeView) ClearRoot() {
 	tv.rootID = ""
 	tv.cursor = 0
 	tv.rebuild()
+	tv.syncViewport()
 }
 
 // SelectedNodeID returns the issue ID under the cursor.
@@ -100,6 +105,13 @@ func (tv *TreeView) SelectedNodeID() string {
 // Resize adapts the tree layout to the given terminal dimensions.
 func (tv *TreeView) Resize(width, height int) {
 	tv.width = width
+	contentHeight := height - 2 // tab bar overhead
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+	tv.viewport.Width = width
+	tv.viewport.Height = contentHeight
+	tv.syncViewport()
 }
 
 func (tv *TreeView) titleMaxWidth() int {
@@ -118,7 +130,9 @@ func (tv *TreeView) titleMaxWidth() int {
 func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)
 	if !ok {
-		return nil
+		var cmd tea.Cmd
+		tv.viewport, cmd = tv.viewport.Update(msg)
+		return cmd
 	}
 
 	switch {
@@ -126,10 +140,14 @@ func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
 		if tv.cursor < len(tv.flatNodes)-1 {
 			tv.cursor++
 		}
+		tv.syncViewport()
+		return nil
 	case key.Matches(km, tv.upKey):
 		if tv.cursor > 0 {
 			tv.cursor--
 		}
+		tv.syncViewport()
+		return nil
 	case key.Matches(km, tv.collapKey):
 		if tv.cursor >= 0 && tv.cursor < len(tv.flatNodes) {
 			node := tv.flatNodes[tv.cursor]
@@ -138,14 +156,28 @@ func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
 				tv.rebuild()
 			}
 		}
+		tv.syncViewport()
+		return nil
 	case key.Matches(km, tv.expandKey):
 		if tv.cursor >= 0 && tv.cursor < len(tv.flatNodes) {
 			node := tv.flatNodes[tv.cursor]
 			delete(tv.collapsed, node.id)
 			tv.rebuild()
 		}
+		tv.syncViewport()
+		return nil
 	}
-	return nil
+
+	var cmd tea.Cmd
+	tv.viewport, cmd = tv.viewport.Update(msg)
+	return cmd
+}
+
+// syncViewport updates the viewport content and scrolls to keep the cursor visible.
+func (tv *TreeView) syncViewport() {
+	tv.viewport.SetContent(tv.renderContent())
+	// cursor line = 2 (stats + blank) + cursor index
+	ensureLineVisible(&tv.viewport, 2+tv.cursor)
 }
 
 // View renders the tree.
@@ -156,7 +188,14 @@ func (tv *TreeView) View() string {
 	if len(tv.flatNodes) == 0 {
 		return "  No tree nodes"
 	}
+	if tv.viewport.Width == 0 && tv.viewport.Height == 0 {
+		return tv.renderContent()
+	}
+	return tv.viewport.View()
+}
 
+// renderContent builds the full tree content string.
+func (tv *TreeView) renderContent() string {
 	var b strings.Builder
 	tv.renderStats(&b)
 	b.WriteString("\n")

@@ -349,6 +349,32 @@ func newTreeViewWithIssues() *TreeView {
 	return tv
 }
 
+func TestTreeView_ViewportScrollsToFollowCursor(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	// Set a small viewport: height 3 means only 3 lines visible
+	tv.Resize(80, 5) // 5 - 2 overhead = 3 viewport lines
+
+	// Move cursor to last node (index 3: root, child-1, grandchild, child-2)
+	for i := 0; i < len(tv.flatNodes)-1; i++ {
+		tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+
+	// The cursor is on line 2+3=5 in content (stats + blank + 4 nodes).
+	// With viewport height 3, offset must be > 0 to show cursor.
+	if tv.viewport.YOffset == 0 {
+		t.Error("viewport should scroll down to keep cursor visible")
+	}
+}
+
+func TestTreeView_ViewportRendersWhenSized(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.Resize(80, 20)
+	out := tv.View()
+	if !strings.Contains(out, "root-1") {
+		t.Error("sized viewport should still render content with root-1")
+	}
+}
+
 func TestTreeView_Resize_VeryNarrow_ClampsTitleWidth(t *testing.T) {
 	tv := NewTreeView()
 	tv.Resize(20, 30)
