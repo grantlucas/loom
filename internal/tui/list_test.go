@@ -60,6 +60,20 @@ func TestListView_StatusInfo_ShowsCountSingular(t *testing.T) {
 	}
 }
 
+func TestListView_StatusInfo_ShowsPlainCount(t *testing.T) {
+	lv := NewListView()
+	lv.hideClosed = false
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "First"},
+		{ID: "a-2", Title: "Second"},
+	})
+
+	info := lv.StatusInfo()
+	if info != "2 issues" {
+		t.Errorf("expected '2 issues', got: %q", info)
+	}
+}
+
 func TestListView_StatusInfo_ShowsFilteredCount(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{

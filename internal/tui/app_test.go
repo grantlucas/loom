@@ -1785,17 +1785,18 @@ func TestApp_StatusBarPinnedToBottom(t *testing.T) {
 	view := app.View()
 	lines := strings.Split(view, "\n")
 
-	// The last non-empty line should contain the status bar hints
-	lastLine := ""
-	for i := len(lines) - 1; i >= 0; i-- {
-		trimmed := strings.TrimSpace(lines[i])
-		if trimmed != "" {
-			lastLine = lines[i]
+	// The status bar should contain hints near the bottom
+	// Layout: ... | border | hints | info line
+	// Find "help" in the bottom 3 lines
+	found := false
+	for i := len(lines) - 1; i >= 0 && i >= len(lines)-3; i-- {
+		if strings.Contains(lines[i], "help") {
+			found = true
 			break
 		}
 	}
-	if !strings.Contains(lastLine, "help") {
-		t.Errorf("expected status bar on last line, got: %q", lastLine)
+	if !found {
+		t.Error("expected 'help' hint in bottom 3 lines of output")
 	}
 
 	// Total output should be exactly height lines (pinned layout)
@@ -1848,5 +1849,112 @@ func TestApp_FilterMode_BlocksGlobalKeys(t *testing.T) {
 	app = model.(App)
 	if app.activeTab != TabIssues {
 		t.Errorf("expected to stay on Issues tab, got tab %d", app.activeTab)
+	}
+}
+
+func TestNewApp_InitializesSpinner(t *testing.T) {
+	app := newTestApp()
+	// Spinner should produce non-empty view
+	if app.spinner.View() == "" {
+		t.Error("expected spinner to be initialized with non-empty view")
+	}
+}
+
+func TestApp_Refresh_SetsRefreshing(t *testing.T) {
+	app := newTestApp()
+	app.loading = false
+	model, _ := app.Update(keyMsg('r'))
+	app = model.(App)
+	if !app.refreshing {
+		t.Error("expected refreshing to be true after pressing 'r'")
+	}
+}
+
+func TestApp_IssuesLoaded_ClearsRefreshing(t *testing.T) {
+	app := newTestApp()
+	app.refreshing = true
+	model, _ := app.Update(IssuesLoadedMsg{Issues: []datasource.Issue{{ID: "x"}}})
+	app = model.(App)
+	if app.refreshing {
+		t.Error("expected refreshing to be false after IssuesLoadedMsg")
+	}
+}
+
+func TestApp_ErrMsg_ClearsRefreshing(t *testing.T) {
+	app := newTestApp()
+	app.refreshing = true
+	model, _ := app.Update(ErrMsg{Err: errors.New("fail")})
+	app = model.(App)
+	if app.refreshing {
+		t.Error("expected refreshing to be false after ErrMsg")
+	}
+}
+
+func TestApp_View_ShowsInfoLineFromView(t *testing.T) {
+	app := loadTestApp(t)
+	// Switch to issues tab
+	model, _ := app.Update(keyMsg('i'))
+	app = model.(App)
+
+	view := app.View()
+	// The info line should contain the issue count from ListView.StatusInfo()
+	if !strings.Contains(view, "issue") {
+		t.Errorf("expected info line to contain issue count, got:\n%s", view)
+	}
+}
+
+func TestApp_View_ShowsRefreshingInInfoLine(t *testing.T) {
+	app := loadTestApp(t)
+	app.refreshing = true
+
+	view := app.View()
+	if !strings.Contains(view, "Refreshing") {
+		t.Errorf("expected view to contain 'Refreshing' while refreshing, got:\n%s", view)
+	}
+}
+
+func TestApp_View_InfoLineBelowHints(t *testing.T) {
+	app := loadTestApp(t)
+	// Switch to issues tab so we have info content
+	model, _ := app.Update(keyMsg('i'))
+	app = model.(App)
+
+	view := app.View()
+	lines := strings.Split(view, "\n")
+
+	// Find the hints line (contains "help") and the info line (contains "issue")
+	hintsIdx := -1
+	infoIdx := -1
+	for i, line := range lines {
+		if strings.Contains(line, "help") {
+			hintsIdx = i
+		}
+		if strings.Contains(line, "issue") {
+			infoIdx = i
+		}
+	}
+	if hintsIdx == -1 {
+		t.Fatal("could not find hints line containing 'help'")
+	}
+	if infoIdx == -1 {
+		t.Fatal("could not find info line containing 'issue'")
+	}
+	if infoIdx <= hintsIdx {
+		t.Errorf("expected info line (idx %d) to be below hints line (idx %d)", infoIdx, hintsIdx)
+	}
+}
+
+func TestApp_HeightReservation_ThreeLines(t *testing.T) {
+	app := newTestApp()
+	model, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	app = model.(App)
+
+	// Views should get height - 3 (border + hints + info)
+	lv, ok := app.views[TabIssues].(*ListView)
+	if !ok {
+		t.Fatal("expected ListView")
+	}
+	if lv.height != 27 {
+		t.Errorf("expected ListView height 27 (30-3), got %d", lv.height)
 	}
 }

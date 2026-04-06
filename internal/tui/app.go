@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -82,9 +83,11 @@ type App struct {
 	history   []string
 	gotoMode  bool
 	gotoInput textinput.Model
-	width     int
-	height    int
-	loading   bool
+	width      int
+	height     int
+	loading    bool
+	refreshing bool
+	spinner    spinner.Model
 }
 
 // NewApp creates a new App wired to the given DataSource.
@@ -98,6 +101,10 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 	ti := textinput.New()
 	ti.Placeholder = "issue ID"
 	ti.CharLimit = 30
+
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+
 	return App{
 		activeTab: TabDashboard,
 		views:     views,
@@ -107,11 +114,12 @@ func NewApp(ds datasource.DataSource, interval time.Duration, watch bool) App {
 		watchMode: watch,
 		gotoInput: ti,
 		loading:   true,
+		spinner:   s,
 	}
 }
 
 func (a App) Init() tea.Cmd {
-	cmds := []tea.Cmd{a.fetchIssues(), a.fetchReady()}
+	cmds := []tea.Cmd{a.fetchIssues(), a.fetchReady(), a.spinner.Tick}
 	if a.watchMode {
 		cmds = append(cmds, a.scheduleTick())
 	}
@@ -158,8 +166,14 @@ func (a App) fetchIssueDetail(id string) tea.Cmd {
 
 func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		a.spinner, cmd = a.spinner.Update(msg)
+		return a, cmd
+
 	case IssuesLoadedMsg:
 		a.loading = false
+		a.refreshing = false
 		a.err = nil
 		if lv, ok := a.views[TabIssues].(*ListView); ok {
 			lv.SetIssues(msg.Issues)
@@ -180,6 +194,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ErrMsg:
 		a.loading = false
+		a.refreshing = false
 		a.err = msg.Err
 		return a, nil
 
@@ -208,7 +223,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		contentHeight := msg.Height - 2 // reserve 2 lines for status bar (border + hints)
+		contentHeight := msg.Height - 3 // reserve 3 lines for status bar (border + hints + info)
 		for _, v := range a.views {
 			v.Resize(msg.Width, contentHeight)
 		}
@@ -318,6 +333,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.activeTab = TabIssues
 			return a, nil
 		case key.Matches(msg, a.keys.Refresh):
+			a.refreshing = true
 			if inv, ok := a.ds.(interface{ Invalidate() }); ok {
 				inv.Invalidate()
 			}
@@ -360,7 +376,7 @@ func (a App) View() string {
 		b.WriteString(gotoPromptStyle.Render("Go to: ") + a.gotoInput.View())
 		b.WriteString("\n")
 	} else if a.loading {
-		b.WriteString("  Loading...")
+		b.WriteString("  " + a.spinner.View() + " Loading...")
 	} else if a.err != nil {
 		b.WriteString(errStyle.Render("  " + friendlyError(a.err)))
 	} else {
@@ -380,8 +396,23 @@ func (a App) View() string {
 			hints = append(sh.StatusHints(), hints...)
 		}
 	}
+	hintsLine := renderStatusBar(hints, a.width)
+
+	// Build info line (below hints)
+	var info string
+	if a.loading {
+		info = a.spinner.View() + " Loading..."
+	} else if a.refreshing {
+		info = a.spinner.View() + " Refreshing..."
+	} else if v, ok := a.views[a.activeTab]; ok {
+		if si, ok := v.(StatusInfoer); ok {
+			info = si.StatusInfo()
+		}
+	}
+	infoLine := renderInfoLine(info, a.width)
+
 	statusBar := statusBarContainerStyle.Width(a.width).Render(
-		renderStatusBar(hints, a.width),
+		hintsLine + "\n" + infoLine,
 	)
 
 	content := b.String()
@@ -390,7 +421,7 @@ func (a App) View() string {
 	}
 
 	// Place content at top, then pin status bar on the last line
-	contentHeight := a.height - 2 // reserve 2 lines for status bar (border + hints)
+	contentHeight := a.height - 3 // reserve 3 lines for status bar (border + hints + info)
 	placed := lipgloss.PlaceVertical(contentHeight, lipgloss.Top, content)
 	return placed + "\n" + statusBar
 }
