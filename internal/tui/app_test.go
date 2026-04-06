@@ -246,8 +246,13 @@ func TestApp_ViewRendersTabBar(t *testing.T) {
 	}
 
 	// Detail tab should NOT appear in the tab bar (it's only reachable via Enter)
-	tabBar := strings.SplitN(view, "\n", 2)[0]
-	if strings.Contains(tabBar, "Detail") {
+	// Tab bar is multi-line (bordered boxes), so check the first few lines
+	lines := strings.SplitN(view, "\n", 5)
+	tabArea := strings.Join(lines, "\n")
+	if len(lines) > 3 {
+		tabArea = strings.Join(lines[:3], "\n")
+	}
+	if strings.Contains(tabArea, "Detail") {
 		t.Error("Detail tab should not appear in the tab bar")
 	}
 }

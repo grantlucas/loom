@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/grantlucas/loom/internal/datasource"
@@ -12,16 +13,20 @@ var (
 	activeTabStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("205")).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("205")).
+			BorderBottom(false).
 			Padding(0, 1)
 
 	inactiveTabStyle = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("243")).
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("240")).
 				Padding(0, 1)
 
-	tabBarStyle = lipgloss.NewStyle().
-			BorderBottom(true).
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240"))
+	// Gap fill line extending from tabs to terminal edge
+	tabGapStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240"))
 
 	// Watch mode indicator
 	watchIndicatorStyle = lipgloss.NewStyle().
@@ -73,6 +78,12 @@ var (
 	hintKeyStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("252"))
 	hintDescStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 	hintSepStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+
+	// Status bar container with top border
+	statusBarContainerStyle = lipgloss.NewStyle().
+				BorderTop(true).
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("236"))
 
 	// Priority color map
 	priorityColors = map[int]lipgloss.Color{
@@ -162,4 +173,17 @@ func StyledStatusSimple(status string) string {
 		icon = "○"
 	}
 	return StatusStyle(status).Render(icon)
+}
+
+// renderSectionHeader renders a section header like "── Title ─────..." that
+// fills to the given width.
+func renderSectionHeader(title string, width int) string {
+	prefix := "── "
+	suffix := " "
+	remaining := width - len(prefix) - len(title) - len(suffix)
+	if remaining < 3 {
+		remaining = 3
+	}
+	line := prefix + title + suffix + strings.Repeat("─", remaining)
+	return detailSectionStyle.Render(line)
 }

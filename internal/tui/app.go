@@ -208,7 +208,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		contentHeight := msg.Height - 1 // reserve 1 line for status bar
+		contentHeight := msg.Height - 2 // reserve 2 lines for status bar (border + hints)
 		for _, v := range a.views {
 			v.Resize(msg.Width, contentHeight)
 		}
@@ -380,7 +380,9 @@ func (a App) View() string {
 			hints = append(sh.StatusHints(), hints...)
 		}
 	}
-	statusBar := renderStatusBar(hints, a.width)
+	statusBar := statusBarContainerStyle.Width(a.width).Render(
+		renderStatusBar(hints, a.width),
+	)
 
 	content := b.String()
 	if a.height <= 0 {
@@ -388,7 +390,7 @@ func (a App) View() string {
 	}
 
 	// Place content at top, then pin status bar on the last line
-	contentHeight := a.height - 1 // reserve 1 line for status bar
+	contentHeight := a.height - 2 // reserve 2 lines for status bar (border + hints)
 	placed := lipgloss.PlaceVertical(contentHeight, lipgloss.Top, content)
 	return placed + "\n" + statusBar
 }
@@ -407,7 +409,7 @@ func (a App) renderHelp() string {
 
 	renderSection := func(title string, entries []entry) string {
 		var sb strings.Builder
-		sb.WriteString(detailSectionStyle.Render("── "+title+" ──"))
+		sb.WriteString(renderSectionHeader(title, a.width))
 		sb.WriteString("\n")
 		for _, e := range entries {
 			sb.WriteString(fmt.Sprintf("  %-10s %s\n", e.key, e.desc))
@@ -481,7 +483,16 @@ func (a App) renderTabBar() string {
 	if a.watchMode {
 		tabs = append(tabs, watchIndicatorStyle.Render("WATCH"))
 	}
-	return tabBarStyle.Render(strings.Join(tabs, ""))
+	joined := lipgloss.JoinHorizontal(lipgloss.Bottom, tabs...)
+
+	// Fill remaining width with a border line on the bottom row
+	joinedWidth := lipgloss.Width(joined)
+	remaining := a.width - joinedWidth
+	if remaining > 0 {
+		fill := tabGapStyle.Render(strings.Repeat("─", remaining))
+		joined = lipgloss.JoinHorizontal(lipgloss.Bottom, joined, fill)
+	}
+	return joined
 }
 
 func (a App) globalHints() []StatusHint {

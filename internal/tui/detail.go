@@ -90,8 +90,8 @@ var (
 
 // Resize adapts the detail layout to the given terminal dimensions.
 func (v *DetailView) Resize(width, height int) {
-	// Subtract overhead for tab bar (2 lines) and breadcrumb (1 line)
-	contentHeight := height - 3
+	// Subtract overhead for tab bar (3 lines) + newline (1) + breadcrumb (1)
+	contentHeight := height - 5
 	if contentHeight < 1 {
 		contentHeight = 1
 	}
@@ -171,7 +171,11 @@ func (v *DetailView) renderContent() string {
 	// Title
 	b.WriteString(detailTitleStyle.Render(fmt.Sprintf("%s: %s", d.ID, d.Title)))
 	b.WriteString("\n")
-	b.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	underlineWidth := 50
+	if v.viewport.Width > 0 {
+		underlineWidth = v.viewport.Width
+	}
+	b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(strings.Repeat("━", underlineWidth)))
 	b.WriteString("\n\n")
 
 	// Metadata
@@ -195,7 +199,7 @@ func (v *DetailView) renderContent() string {
 
 	// Description
 	b.WriteString("\n")
-	b.WriteString(detailSectionStyle.Render("── Description ──────────────────────────────────"))
+	b.WriteString(renderSectionHeader("Description", v.viewport.Width))
 	b.WriteString("\n\n")
 	if v.viewport.Width > 0 {
 		b.WriteString(lipgloss.NewStyle().Width(v.viewport.Width).Render(d.Description))
@@ -206,7 +210,7 @@ func (v *DetailView) renderContent() string {
 
 	// Dependencies
 	b.WriteString("\n")
-	b.WriteString(detailSectionStyle.Render(fmt.Sprintf("── Dependencies (%d) ─────────────────────────────", len(d.Dependencies))))
+	b.WriteString(renderSectionHeader(fmt.Sprintf("Dependencies (%d)", len(d.Dependencies)), v.viewport.Width))
 	b.WriteString("\n\n")
 	relIndex := 0
 	if len(d.Dependencies) == 0 {
@@ -231,7 +235,7 @@ func (v *DetailView) renderContent() string {
 
 	// Dependents
 	b.WriteString("\n")
-	b.WriteString(detailSectionStyle.Render(fmt.Sprintf("── Dependents (%d) ───────────────────────────────", len(d.Dependents))))
+	b.WriteString(renderSectionHeader(fmt.Sprintf("Dependents (%d)", len(d.Dependents)), v.viewport.Width))
 	b.WriteString("\n\n")
 	if len(d.Dependents) == 0 {
 		b.WriteString("  None\n")

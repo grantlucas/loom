@@ -17,6 +17,7 @@ type DashboardView struct {
 	issues      []datasource.Issue
 	ready       []datasource.Issue
 	barMaxWidth int
+	width       int
 }
 
 // NewDashboardView creates a new DashboardView.
@@ -45,6 +46,7 @@ func (d *DashboardView) Resize(width, height int) {
 		barWidth = 80
 	}
 	d.barMaxWidth = barWidth
+	d.width = width
 }
 
 // StatusHints returns contextual key hints for the status bar.
@@ -77,7 +79,7 @@ func (d *DashboardView) View() string {
 
 func (d *DashboardView) renderStatus(b *strings.Builder) {
 	open, inProgress, closed := d.statusCounts()
-	b.WriteString(detailSectionStyle.Render("── Status ──────────────────────────"))
+	b.WriteString(renderSectionHeader("Status", d.width))
 	b.WriteString("\n")
 	b.WriteString(fmt.Sprintf("  Open: %d   In Progress: %d   Closed: %d\n", open, inProgress, closed))
 	b.WriteString("\n")
@@ -99,7 +101,7 @@ func (d *DashboardView) statusCounts() (open, inProgress, closed int) {
 
 func (d *DashboardView) renderPriority(b *strings.Builder) {
 	dist := d.priorityDistribution()
-	b.WriteString(detailSectionStyle.Render("── Priority ────────────────────────"))
+	b.WriteString(renderSectionHeader("Priority", d.width))
 	b.WriteString("\n")
 
 	// Find max count for scaling
@@ -141,7 +143,7 @@ func (d *DashboardView) priorityDistribution() map[int]int {
 }
 
 func (d *DashboardView) renderReadyQueue(b *strings.Builder) {
-	b.WriteString(detailSectionStyle.Render("── Ready Queue ─────────────────────"))
+	b.WriteString(renderSectionHeader("Ready Queue", d.width))
 	b.WriteString("\n")
 	if len(d.ready) == 0 {
 		b.WriteString("  None\n")
@@ -164,7 +166,7 @@ type blockedInfo struct {
 }
 
 func (d *DashboardView) renderBlocked(b *strings.Builder) {
-	b.WriteString(detailSectionStyle.Render("── Blocked ─────────────────────────"))
+	b.WriteString(renderSectionHeader("Blocked", d.width))
 	b.WriteString("\n")
 	blocked := d.blockedIssues()
 	if len(blocked) == 0 {
@@ -203,7 +205,7 @@ func (d *DashboardView) blockedIssues() []blockedInfo {
 }
 
 func (d *DashboardView) renderStats(b *strings.Builder) {
-	b.WriteString(detailSectionStyle.Render("── Stats ───────────────────────────"))
+	b.WriteString(renderSectionHeader("Stats", d.width))
 	b.WriteString("\n")
 	chain := d.longestChain()
 	b.WriteString(fmt.Sprintf("  Longest chain: %d   Total: %d\n", chain, len(d.issues)))

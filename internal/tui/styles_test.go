@@ -21,9 +21,27 @@ func TestInactiveTabStyle_IsNotBold(t *testing.T) {
 	}
 }
 
-func TestTabBarStyle_HasBottomBorder(t *testing.T) {
-	if !tabBarStyle.GetBorderBottom() {
-		t.Error("tab bar style should have a bottom border")
+func TestActiveTabStyle_HasBorderWithoutBottom(t *testing.T) {
+	if !activeTabStyle.GetBorderTop() {
+		t.Error("active tab style should have a top border")
+	}
+	if !activeTabStyle.GetBorderLeft() {
+		t.Error("active tab style should have a left border")
+	}
+	if !activeTabStyle.GetBorderRight() {
+		t.Error("active tab style should have a right border")
+	}
+	if activeTabStyle.GetBorderBottom() {
+		t.Error("active tab style should NOT have a bottom border")
+	}
+}
+
+func TestInactiveTabStyle_HasFullBorder(t *testing.T) {
+	if !inactiveTabStyle.GetBorderTop() {
+		t.Error("inactive tab style should have a top border")
+	}
+	if !inactiveTabStyle.GetBorderBottom() {
+		t.Error("inactive tab style should have a bottom border")
 	}
 }
 
@@ -224,5 +242,32 @@ func TestPlainStatus_ContainsNoANSI(t *testing.T) {
 	got := PlainStatus(issue)
 	if strings.Contains(got, "\x1b") {
 		t.Errorf("PlainStatus should not contain ANSI escape codes, got %q", got)
+	}
+}
+
+func TestRenderSectionHeader_ContainsTitle(t *testing.T) {
+	result := renderSectionHeader("Status", 40)
+	if !strings.Contains(result, "Status") {
+		t.Errorf("renderSectionHeader should contain title, got %q", result)
+	}
+}
+
+func TestRenderSectionHeader_ContainsDashes(t *testing.T) {
+	result := renderSectionHeader("Status", 40)
+	if !strings.Contains(result, "──") {
+		t.Errorf("renderSectionHeader should contain dash characters, got %q", result)
+	}
+}
+
+func TestStatusBarContainerStyle_HasTopBorder(t *testing.T) {
+	if !statusBarContainerStyle.GetBorderTop() {
+		t.Error("status bar container style should have a top border")
+	}
+}
+
+func TestTabGapStyle_HasForegroundColor(t *testing.T) {
+	fg := tabGapStyle.GetForeground()
+	if fg == (lipgloss.NoColor{}) {
+		t.Error("tab gap style should have a foreground color")
 	}
 }
