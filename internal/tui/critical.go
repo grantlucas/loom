@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grantlucas/loom/internal/datasource"
@@ -26,6 +27,7 @@ type CriticalPathView struct {
 	cursor   int
 	sortMode criticalSortMode
 	width    int
+	viewport viewport.Model
 	sortKey  key.Binding
 	priKey   key.Binding
 	upKey    key.Binding
@@ -78,6 +80,7 @@ func (cv *CriticalPathView) SetIssues(issues []datasource.Issue) {
 	cv.chains = graph.CriticalPaths(g, priorities)
 	cv.sortChains()
 	cv.cursor = 0
+	cv.syncViewport()
 }
 
 // SelectedNodeID returns the issue ID under the cursor.
@@ -100,6 +103,13 @@ func (cv *CriticalPathView) SelectedNodeID() string {
 // Resize adapts the critical path layout to the given terminal dimensions.
 func (cv *CriticalPathView) Resize(width, height int) {
 	cv.width = width
+	contentHeight := height - 2
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+	cv.viewport.Width = width
+	cv.viewport.Height = contentHeight
+	cv.syncViewport()
 }
 
 func (cv *CriticalPathView) titleMaxWidth() int {
@@ -118,7 +128,9 @@ func (cv *CriticalPathView) titleMaxWidth() int {
 func (cv *CriticalPathView) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)
 	if !ok {
-		return nil
+		var cmd tea.Cmd
+		cv.viewport, cmd = cv.viewport.Update(msg)
+		return cmd
 	}
 
 	switch {
@@ -127,20 +139,31 @@ func (cv *CriticalPathView) Update(msg tea.Msg) tea.Cmd {
 		if cv.cursor < total-1 {
 			cv.cursor++
 		}
+		cv.syncViewport()
+		return nil
 	case key.Matches(km, cv.upKey):
 		if cv.cursor > 0 {
 			cv.cursor--
 		}
+		cv.syncViewport()
+		return nil
 	case key.Matches(km, cv.priKey):
 		cv.sortMode = critSortByPriority
 		cv.sortChains()
 		cv.cursor = 0
+		cv.syncViewport()
+		return nil
 	case key.Matches(km, cv.sortKey):
 		cv.sortMode = critSortByLength
 		cv.sortChains()
 		cv.cursor = 0
+		cv.syncViewport()
+		return nil
 	}
-	return nil
+
+	var cmd tea.Cmd
+	cv.viewport, cmd = cv.viewport.Update(msg)
+	return cmd
 }
 
 // View renders the critical path display.
@@ -151,7 +174,14 @@ func (cv *CriticalPathView) View() string {
 	if len(cv.chains) == 0 {
 		return "  No blocking chains found"
 	}
+	if cv.viewport.Width == 0 && cv.viewport.Height == 0 {
+		return cv.renderContent()
+	}
+	return cv.viewport.View()
+}
 
+// renderContent builds the full critical path content string.
+func (cv *CriticalPathView) renderContent() string {
 	var b strings.Builder
 	cv.renderSummary(&b)
 	b.WriteString("\n")
@@ -175,6 +205,31 @@ func (cv *CriticalPathView) View() string {
 	}
 
 	return b.String()
+}
+
+// syncViewport updates viewport content and scrolls to keep cursor visible.
+func (cv *CriticalPathView) syncViewport() {
+	cv.viewport.SetContent(cv.renderContent())
+	ensureLineVisible(&cv.viewport, cv.cursorLine())
+}
+
+// cursorLine computes the output line number for the current cursor position.
+func (cv *CriticalPathView) cursorLine() int {
+	// Summary: 2 lines (summary text + blank)
+	line := 2
+	nodeIdx := 0
+	for _, chain := range cv.chains {
+		line++ // chain header
+		for range chain.Nodes {
+			if nodeIdx == cv.cursor {
+				return line
+			}
+			line++
+			nodeIdx++
+		}
+		line++ // blank line after chain
+	}
+	return line
 }
 
 func (cv *CriticalPathView) renderSummary(b *strings.Builder) {

@@ -391,6 +391,31 @@ func newCriticalViewWithChain() *CriticalPathView {
 	return cv
 }
 
+func TestCriticalPathView_ViewportScrollsToFollowCursor(t *testing.T) {
+	cv := newCriticalViewWithChain()
+	// Small viewport: height 3 means only 3 content lines visible
+	cv.Resize(80, 5) // 5 - 2 overhead = 3 viewport lines
+
+	// Move cursor to last node
+	total := cv.totalNodes()
+	for i := 0; i < total-1; i++ {
+		cv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+
+	if cv.viewport.YOffset == 0 {
+		t.Error("viewport should scroll down to keep cursor visible")
+	}
+}
+
+func TestCriticalPathView_ViewportRendersWhenSized(t *testing.T) {
+	cv := newCriticalViewWithChain()
+	cv.Resize(80, 20)
+	out := cv.View()
+	if !strings.Contains(out, "Chain 1") {
+		t.Error("sized viewport should still render chain content")
+	}
+}
+
 func TestCriticalPathView_Resize_VeryNarrow_ClampsTitleWidth(t *testing.T) {
 	cv := NewCriticalPathView()
 	cv.Resize(20, 30)
