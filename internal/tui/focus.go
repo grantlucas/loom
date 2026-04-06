@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/grantlucas/loom/internal/datasource"
@@ -31,6 +32,7 @@ type FocusView struct {
 	sortMode focusSortMode
 	expanded bool
 	width    int
+	viewport viewport.Model
 
 	sortKey key.Binding
 	expKey  key.Binding
@@ -104,6 +106,7 @@ func (fv *FocusView) rebuild() {
 	fv.items = graph.DownstreamImpact(fv.dag, fv.readyIDs, priorities)
 	fv.sortItems()
 	fv.cursor = 0
+	fv.syncViewport()
 }
 
 // SelectedNodeID returns the issue ID under the cursor.
@@ -136,6 +139,13 @@ func (fv *FocusView) SelectedNodeID() string {
 // Resize adapts the focus layout to the given terminal dimensions.
 func (fv *FocusView) Resize(width, height int) {
 	fv.width = width
+	contentHeight := height - 2
+	if contentHeight < 1 {
+		contentHeight = 1
+	}
+	fv.viewport.Width = width
+	fv.viewport.Height = contentHeight
+	fv.syncViewport()
 }
 
 func (fv *FocusView) titleMaxWidth() int {
@@ -166,7 +176,9 @@ func (fv *FocusView) downstreamTitleMaxWidth() int {
 func (fv *FocusView) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)
 	if !ok {
-		return nil
+		var cmd tea.Cmd
+		fv.viewport, cmd = fv.viewport.Update(msg)
+		return cmd
 	}
 
 	switch {
@@ -175,19 +187,30 @@ func (fv *FocusView) Update(msg tea.Msg) tea.Cmd {
 		if fv.cursor < total-1 {
 			fv.cursor++
 		}
+		fv.syncViewport()
+		return nil
 	case key.Matches(km, fv.upKey):
 		if fv.cursor > 0 {
 			fv.cursor--
 		}
+		fv.syncViewport()
+		return nil
 	case key.Matches(km, fv.sortKey):
 		fv.sortMode = (fv.sortMode + 1) % 4
 		fv.sortItems()
 		fv.cursor = 0
+		fv.syncViewport()
+		return nil
 	case key.Matches(km, fv.expKey):
 		fv.expanded = !fv.expanded
 		fv.cursor = 0
+		fv.syncViewport()
+		return nil
 	}
-	return nil
+
+	var cmd tea.Cmd
+	fv.viewport, cmd = fv.viewport.Update(msg)
+	return cmd
 }
 
 // View renders the focus display.
@@ -198,7 +221,14 @@ func (fv *FocusView) View() string {
 	if len(fv.items) == 0 {
 		return "  No ready issues"
 	}
+	if fv.viewport.Width == 0 && fv.viewport.Height == 0 {
+		return fv.renderContent()
+	}
+	return fv.viewport.View()
+}
 
+// renderContent builds the full focus content string.
+func (fv *FocusView) renderContent() string {
 	var b strings.Builder
 	fv.renderSummary(&b)
 	b.WriteString("\n")
@@ -229,6 +259,39 @@ func (fv *FocusView) View() string {
 	}
 
 	return b.String()
+}
+
+// syncViewport updates viewport content and scrolls to keep cursor visible.
+func (fv *FocusView) syncViewport() {
+	fv.viewport.SetContent(fv.renderContent())
+	ensureLineVisible(&fv.viewport, fv.cursorLine())
+}
+
+// cursorLine computes the output line number for the current cursor position.
+func (fv *FocusView) cursorLine() int {
+	// Summary: 2 lines (summary text + blank)
+	line := 2
+	lineIdx := 0
+	for _, item := range fv.items {
+		// Each item renders as 2 lines (main + impact line, embedded \n in format)
+		if lineIdx == fv.cursor {
+			return line
+		}
+		line += 2 // renderItemLine produces 2 lines
+		lineIdx++
+
+		if fv.expanded {
+			for range item.Downstream {
+				if lineIdx == fv.cursor {
+					return line
+				}
+				line++
+				lineIdx++
+			}
+			line++ // blank line between items
+		}
+	}
+	return line
 }
 
 func (fv *FocusView) renderSummary(b *strings.Builder) {

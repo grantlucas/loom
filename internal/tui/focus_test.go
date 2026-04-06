@@ -530,6 +530,31 @@ func newFocusViewPopulated() *FocusView {
 	return fv
 }
 
+func TestFocusView_ViewportScrollsToFollowCursor(t *testing.T) {
+	fv := newFocusViewPopulated()
+	// Small viewport: 5 - 2 = 3 content lines
+	fv.Resize(80, 5)
+
+	// Move cursor to last line
+	total := fv.totalLines()
+	for i := 0; i < total-1; i++ {
+		fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+
+	if fv.viewport.YOffset == 0 {
+		t.Error("viewport should scroll down to keep cursor visible")
+	}
+}
+
+func TestFocusView_ViewportRendersWhenSized(t *testing.T) {
+	fv := newFocusViewPopulated()
+	fv.Resize(80, 40)
+	out := fv.View()
+	if !strings.Contains(out, "ready") {
+		t.Error("sized viewport should still render focus content")
+	}
+}
+
 func TestFocusView_Resize_VeryNarrow_ClampsTitleWidth(t *testing.T) {
 	fv := NewFocusView()
 	fv.Resize(20, 30)
