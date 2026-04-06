@@ -103,7 +103,7 @@ func TestListView_SortByPriority(t *testing.T) {
 	}
 }
 
-func TestListView_SortByPriority_ClosedAfterOpen(t *testing.T) {
+func TestListView_SortByPriority_SecondaryByStatus(t *testing.T) {
 	lv := NewListView()
 	lv.Update(keyMsg('c')) // show closed issues
 	lv.SetIssues([]datasource.Issue{
@@ -113,15 +113,14 @@ func TestListView_SortByPriority_ClosedAfterOpen(t *testing.T) {
 		{ID: "wip-p1", Priority: 1, Status: "in_progress", Title: "Active high"},
 	})
 
-	// Priority sort ascending: open/in_progress P1, open P2, then closed P1
+	// Priority ascending, secondary by status order (in_progress=0, open=1, closed=2)
+	// All P1 items grouped together: wip-p1, open-p1, closed-p1, then P2: open-p2
 	rows := lv.table.Rows()
-	// First should be open/in_progress P1 items
-	if rows[0][0] == "closed-p1" {
-		t.Error("closed issue should not appear before open issues at same priority")
-	}
-	// Last should be closed items
-	if rows[len(rows)-1][0] != "closed-p1" {
-		t.Errorf("expected closed issue last, got %q", rows[len(rows)-1][0])
+	expected := []string{"wip-p1", "open-p1", "closed-p1", "open-p2"}
+	for i, want := range expected {
+		if rows[i][0] != want {
+			t.Errorf("row %d: expected %q, got %q", i, want, rows[i][0])
+		}
 	}
 }
 

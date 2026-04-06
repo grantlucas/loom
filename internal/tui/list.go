@@ -98,11 +98,6 @@ func (v *ListView) sortIssues() {
 		a, b := v.issues[i], v.issues[j]
 		switch v.sortCol {
 		case sortByPriority:
-			aClosed := a.Status == "closed"
-			bClosed := b.Status == "closed"
-			if aClosed != bClosed {
-				return !aClosed
-			}
 			if a.Priority != b.Priority {
 				return a.Priority < b.Priority
 			}
