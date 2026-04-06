@@ -168,7 +168,7 @@ func TestListView_ReadyIndicator(t *testing.T) {
 
 func TestListView_ClosedIndicator(t *testing.T) {
 	lv := NewListView()
-	lv.hideClosed = false // show closed issues for this test
+	lv.Update(keyMsg('c')) // show closed issues for this test
 	lv.SetIssues([]datasource.Issue{
 		{
 			ID:     "a-1",
@@ -660,6 +660,34 @@ func TestListView_HidesClosedByDefault(t *testing.T) {
 	}
 	if !strings.Contains(view, "2 of 3") {
 		t.Errorf("expected '2 of 3' count (closed hidden), got:\n%s", view)
+	}
+}
+
+func TestListView_ToggleClosedWithCKey(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Open task", Status: "open"},
+		{ID: "a-2", Title: "Done task", Status: "closed"},
+	})
+
+	// Default: closed hidden
+	view := lv.View()
+	if strings.Contains(view, "a-2") {
+		t.Fatal("expected closed issue hidden by default")
+	}
+
+	// Press 'c' to show closed
+	lv.Update(keyMsg('c'))
+	view = lv.View()
+	if !strings.Contains(view, "a-2") {
+		t.Error("expected closed issue visible after pressing 'c'")
+	}
+
+	// Press 'c' again to hide closed
+	lv.Update(keyMsg('c'))
+	view = lv.View()
+	if strings.Contains(view, "a-2") {
+		t.Error("expected closed issue hidden after pressing 'c' again")
 	}
 }
 

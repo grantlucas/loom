@@ -190,6 +190,11 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 			v.sortAndRefresh()
 			return nil
 		}
+		if msg.String() == "c" {
+			v.hideClosed = !v.hideClosed
+			v.rebuildRows()
+			return nil
+		}
 		if msg.String() == "/" {
 			v.filterMode = true
 			v.filterInput.Focus()
