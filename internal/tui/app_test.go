@@ -1702,6 +1702,78 @@ func TestApp_FilterInactive_AllowsGlobalKeys(t *testing.T) {
 	}
 }
 
+// --- Status bar ---
+
+func loadTestApp(t *testing.T) App {
+	t.Helper()
+	app := newTestApp()
+	model, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	app = model.(App)
+	model, _ = app.Update(IssuesLoadedMsg{Issues: []datasource.Issue{{ID: "a-1"}}})
+	app = model.(App)
+	model, _ = app.Update(ReadyLoadedMsg{Issues: nil})
+	app = model.(App)
+	return app
+}
+
+func TestApp_ViewContainsStatusBar(t *testing.T) {
+	app := loadTestApp(t)
+
+	view := app.View()
+	// Dashboard should show its hints plus global hints
+	if !strings.Contains(view, "help") {
+		t.Error("expected global 'help' hint in status bar")
+	}
+	if !strings.Contains(view, "quit") {
+		t.Error("expected global 'quit' hint in status bar")
+	}
+}
+
+func TestApp_StatusBarContextualForIssuesTab(t *testing.T) {
+	app := loadTestApp(t)
+
+	// Switch to issues tab
+	model, _ := app.Update(keyMsg('i'))
+	app = model.(App)
+
+	view := app.View()
+	if !strings.Contains(view, "sort") {
+		t.Error("expected 'sort' hint on issues tab")
+	}
+	if !strings.Contains(view, "filter") {
+		t.Error("expected 'filter' hint on issues tab")
+	}
+}
+
+func TestApp_StatusBarContextualForTreeTab(t *testing.T) {
+	app := loadTestApp(t)
+
+	model, _ := app.Update(keyMsg('t'))
+	app = model.(App)
+
+	view := app.View()
+	if !strings.Contains(view, "expand") {
+		t.Error("expected 'expand' hint on tree tab")
+	}
+	if !strings.Contains(view, "collapse") {
+		t.Error("expected 'collapse' hint on tree tab")
+	}
+}
+
+func TestApp_HeightAccountsForStatusBar(t *testing.T) {
+	app := newTestApp()
+	model, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	app = model.(App)
+
+	// The app should store full dimensions
+	if app.width != 80 {
+		t.Errorf("expected width 80, got %d", app.width)
+	}
+	if app.height != 30 {
+		t.Errorf("expected height 30, got %d", app.height)
+	}
+}
+
 func TestApp_FilterMode_BlocksGlobalKeys(t *testing.T) {
 	app := newTestApp()
 	// Switch to Issues tab

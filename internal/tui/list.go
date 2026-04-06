@@ -268,6 +268,25 @@ func matchesFilter(issue datasource.Issue, filterText string) bool {
 	return true
 }
 
+// StatusHints returns contextual key hints for the status bar.
+func (v *ListView) StatusHints() []StatusHint {
+	if v.filterMode {
+		return []StatusHint{
+			{Key: "enter", Desc: "apply"},
+			{Key: "esc", Desc: "cancel"},
+		}
+	}
+	hints := []StatusHint{
+		{Key: "s", Desc: "sort"},
+		{Key: "/", Desc: "filter"},
+		{Key: "enter", Desc: "open"},
+	}
+	if v.filterText != "" {
+		hints = append(hints, StatusHint{Key: "esc", Desc: "clear filter"})
+	}
+	return hints
+}
+
 // View renders the issue list table.
 func (v *ListView) View() string {
 	var status string

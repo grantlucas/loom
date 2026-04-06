@@ -47,6 +47,14 @@ func (d *DashboardView) Resize(width, height int) {
 	d.barMaxWidth = barWidth
 }
 
+// StatusHints returns contextual key hints for the status bar.
+func (d *DashboardView) StatusHints() []StatusHint {
+	return []StatusHint{
+		{Key: "r", Desc: "refresh"},
+		{Key: "g", Desc: "goto"},
+	}
+}
+
 // Update handles messages. The dashboard has no interactive elements.
 func (d *DashboardView) Update(_ tea.Msg) tea.Cmd {
 	return nil

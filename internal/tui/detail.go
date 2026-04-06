@@ -48,6 +48,15 @@ func (v *DetailView) SetError(err error) {
 	v.loading = false
 }
 
+// StatusHints returns contextual key hints for the status bar.
+func (v *DetailView) StatusHints() []StatusHint {
+	return []StatusHint{
+		{Key: "j/k", Desc: "relations"},
+		{Key: "enter", Desc: "open"},
+		{Key: "esc", Desc: "back"},
+	}
+}
+
 // relations returns the combined list of dependencies and dependents.
 func (v *DetailView) relations() []datasource.ExpandedRelation {
 	if v.detail == nil {

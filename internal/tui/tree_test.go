@@ -395,6 +395,28 @@ func TestTreeView_ViewportRendersWhenSized(t *testing.T) {
 	}
 }
 
+// --- StatusHints ---
+
+func TestTreeView_ImplementsStatusHinter(t *testing.T) {
+	var _ StatusHinter = NewTreeView()
+}
+
+func TestTreeView_StatusHints(t *testing.T) {
+	tv := NewTreeView()
+	hints := tv.StatusHints()
+
+	keys := make(map[string]string)
+	for _, h := range hints {
+		keys[h.Key] = h.Desc
+	}
+
+	for _, k := range []string{"j/k", "e", "c", "enter"} {
+		if _, ok := keys[k]; !ok {
+			t.Errorf("expected hint for key %q", k)
+		}
+	}
+}
+
 func TestTreeView_Resize_VeryNarrow_ClampsTitleWidth(t *testing.T) {
 	tv := NewTreeView()
 	tv.Resize(20, 30)

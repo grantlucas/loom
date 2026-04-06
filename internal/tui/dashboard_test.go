@@ -426,6 +426,28 @@ func TestDashboardView_UsesStyledPriorityInReadyQueue(t *testing.T) {
 	}
 }
 
+// --- StatusHints ---
+
+func TestDashboardView_ImplementsStatusHinter(t *testing.T) {
+	var _ StatusHinter = NewDashboardView()
+}
+
+func TestDashboardView_StatusHints(t *testing.T) {
+	dv := NewDashboardView()
+	hints := dv.StatusHints()
+
+	keys := make(map[string]string)
+	for _, h := range hints {
+		keys[h.Key] = h.Desc
+	}
+
+	for _, k := range []string{"r", "g"} {
+		if _, ok := keys[k]; !ok {
+			t.Errorf("expected hint for key %q", k)
+		}
+	}
+}
+
 func TestDashboardView_Resize_VeryNarrow_ClampsBarWidth(t *testing.T) {
 	dv := NewDashboardView()
 	dv.Resize(10, 30)

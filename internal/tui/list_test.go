@@ -569,6 +569,76 @@ func TestListView_Resize_FixedColumnsStaySameWidth(t *testing.T) {
 	}
 }
 
+// --- StatusHints ---
+
+func TestListView_ImplementsStatusHinter(t *testing.T) {
+	var _ StatusHinter = NewListView()
+}
+
+func TestListView_StatusHints_NormalMode(t *testing.T) {
+	lv := NewListView()
+	hints := lv.StatusHints()
+
+	keys := make(map[string]string)
+	for _, h := range hints {
+		keys[h.Key] = h.Desc
+	}
+
+	for _, k := range []string{"s", "/", "enter"} {
+		if _, ok := keys[k]; !ok {
+			t.Errorf("expected hint for key %q in normal mode", k)
+		}
+	}
+}
+
+func TestListView_StatusHints_FilterMode(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{{ID: "a-1", Title: "Test"}})
+	enterFilterMode(lv)
+
+	hints := lv.StatusHints()
+	keys := make(map[string]string)
+	for _, h := range hints {
+		keys[h.Key] = h.Desc
+	}
+
+	if _, ok := keys["enter"]; !ok {
+		t.Error("expected 'enter' hint in filter mode")
+	}
+	if _, ok := keys["esc"]; !ok {
+		t.Error("expected 'esc' hint in filter mode")
+	}
+	// Should NOT have sort hint in filter mode
+	if _, ok := keys["s"]; ok {
+		t.Error("should not show sort hint in filter mode")
+	}
+}
+
+func TestListView_StatusHints_ActiveFilter(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Login"},
+		{ID: "a-2", Title: "Other"},
+	})
+
+	enterFilterMode(lv)
+	typeText(lv, "login")
+	lv.Update(enterKey())
+
+	hints := lv.StatusHints()
+
+	// Should have normal hints plus filter-active indicator
+	found := false
+	for _, h := range hints {
+		if h.Key == "esc" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected 'esc' hint when filter is active")
+	}
+}
+
 func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
 	lv := NewListView()
 	lv.Resize(40, 30) // very narrow

@@ -69,6 +69,11 @@ var (
 	filterPromptStyle = lipgloss.NewStyle().
 				Bold(true)
 
+	// Status bar hint styles
+	hintKeyStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("252"))
+	hintDescStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+	hintSepStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+
 	// Priority color map
 	priorityColors = map[int]lipgloss.Color{
 		0: lipgloss.Color("196"), // red

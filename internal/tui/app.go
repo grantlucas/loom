@@ -207,8 +207,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
+		contentHeight := msg.Height - 1 // reserve 1 line for status bar
 		for _, v := range a.views {
-			v.Resize(msg.Width, msg.Height)
+			v.Resize(msg.Width, contentHeight)
 		}
 		return a, nil
 
@@ -370,6 +371,17 @@ func (a App) View() string {
 			b.WriteString(v.View())
 		}
 	}
+
+	// Status bar
+	hints := a.globalHints()
+	if v, ok := a.views[a.activeTab]; ok {
+		if sh, ok := v.(StatusHinter); ok {
+			hints = append(sh.StatusHints(), hints...)
+		}
+	}
+	b.WriteString("\n")
+	b.WriteString(renderStatusBar(hints, a.width))
+
 	return b.String()
 }
 
@@ -462,6 +474,25 @@ func (a App) renderTabBar() string {
 		tabs = append(tabs, watchIndicatorStyle.Render("WATCH"))
 	}
 	return tabBarStyle.Render(strings.Join(tabs, ""))
+}
+
+func (a App) globalHints() []StatusHint {
+	if a.gotoMode {
+		return []StatusHint{
+			{Key: "enter", Desc: "go"},
+			{Key: "esc", Desc: "cancel"},
+		}
+	}
+	if a.showHelp {
+		return []StatusHint{
+			{Key: "?", Desc: "close help"},
+			{Key: "q", Desc: "quit"},
+		}
+	}
+	return []StatusHint{
+		{Key: "?", Desc: "help"},
+		{Key: "q", Desc: "quit"},
+	}
 }
 
 func friendlyError(err error) string {

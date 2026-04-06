@@ -571,6 +571,28 @@ type errForTest string
 
 func (e errForTest) Error() string { return string(e) }
 
+// --- StatusHints ---
+
+func TestDetailView_ImplementsStatusHinter(t *testing.T) {
+	var _ StatusHinter = NewDetailView()
+}
+
+func TestDetailView_StatusHints(t *testing.T) {
+	dv := NewDetailView()
+	hints := dv.StatusHints()
+
+	keys := make(map[string]string)
+	for _, h := range hints {
+		keys[h.Key] = h.Desc
+	}
+
+	for _, k := range []string{"j/k", "enter", "esc"} {
+		if _, ok := keys[k]; !ok {
+			t.Errorf("expected hint for key %q", k)
+		}
+	}
+}
+
 func TestDetailView_Resize_VerySmallHeight_ClampsToOne(t *testing.T) {
 	dv := NewDetailView()
 	dv.Resize(80, 2) // height - 3 = -1, should clamp to 1

@@ -58,6 +58,16 @@ func NewTreeView() *TreeView {
 	}
 }
 
+// StatusHints returns contextual key hints for the status bar.
+func (tv *TreeView) StatusHints() []StatusHint {
+	return []StatusHint{
+		{Key: "j/k", Desc: "navigate"},
+		{Key: "e", Desc: "expand"},
+		{Key: "c", Desc: "collapse"},
+		{Key: "enter", Desc: "open"},
+	}
+}
+
 // SetIssues builds the DAG and flattens the tree for rendering.
 func (tv *TreeView) SetIssues(issues []datasource.Issue) {
 	tv.issues = make(map[string]datasource.Issue, len(issues))
