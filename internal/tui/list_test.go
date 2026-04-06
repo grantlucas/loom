@@ -746,6 +746,100 @@ func TestListView_HideClosedCombinesWithFilter(t *testing.T) {
 	}
 }
 
+func TestListView_ShiftS_TogglesDescendingSort(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Priority: 1, Title: "Alpha"},
+		{ID: "a-2", Priority: 2, Title: "Beta"},
+		{ID: "a-3", Priority: 3, Title: "Gamma"},
+	})
+
+	// Default: ascending priority — a-1 first
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("expected 'a-1' in ascending order, got %q", got)
+	}
+
+	// Press 'S' (shift+s) to toggle to descending
+	lv.Update(keyMsg('S'))
+	if got := lv.SelectedIssueID(); got != "a-3" {
+		t.Fatalf("expected 'a-3' in descending order, got %q", got)
+	}
+
+	// Press 'S' again to toggle back to ascending
+	lv.Update(keyMsg('S'))
+	if got := lv.SelectedIssueID(); got != "a-1" {
+		t.Fatalf("expected 'a-1' after toggling back to ascending, got %q", got)
+	}
+}
+
+func TestListView_SortDirectionIndicator(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Priority: 1, Title: "Test"},
+	})
+
+	// Default ascending: should show ▲
+	view := lv.View()
+	if !strings.Contains(view, "▲") {
+		t.Errorf("expected ▲ indicator for ascending sort, got:\n%s", view)
+	}
+
+	// Toggle to descending: should show ▼
+	lv.Update(keyMsg('S'))
+	view = lv.View()
+	if !strings.Contains(view, "▼") {
+		t.Errorf("expected ▼ indicator for descending sort, got:\n%s", view)
+	}
+}
+
+func TestListView_CycleColumnResetsDirection(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Priority: 1, Status: "open", Title: "Alpha"},
+		{ID: "a-2", Priority: 2, Status: "in_progress", Title: "Beta"},
+	})
+
+	// Toggle to descending
+	lv.Update(keyMsg('S'))
+	if got := lv.SelectedIssueID(); got != "a-2" {
+		t.Fatalf("expected 'a-2' descending, got %q", got)
+	}
+
+	// Cycle column with 's' — direction should reset to ascending
+	lv.Update(keyMsg('s'))
+	// Now sorting by status ascending: in_progress (a-2) before open (a-1)
+	if got := lv.SelectedIssueID(); got != "a-2" {
+		t.Fatalf("expected 'a-2' (in_progress first in ascending), got %q", got)
+	}
+
+	// Verify direction indicator reset to ascending
+	view := lv.View()
+	if strings.Contains(view, "▼") {
+		t.Error("expected direction to reset to ascending (▲) after cycling column")
+	}
+	if !strings.Contains(view, "▲") {
+		t.Errorf("expected ▲ indicator after column cycle, got:\n%s", view)
+	}
+}
+
+func TestListView_StatusHints_ShowsSortDirection(t *testing.T) {
+	lv := NewListView()
+
+	hints := lv.StatusHints()
+	found := false
+	for _, h := range hints {
+		if h.Key == "S" {
+			found = true
+			if h.Desc != "reverse sort" {
+				t.Errorf("expected hint 'reverse sort', got %q", h.Desc)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected 'S' hint in status hints")
+	}
+}
+
 func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
 	lv := NewListView()
 	lv.Resize(40, 30) // very narrow

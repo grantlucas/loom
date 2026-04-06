@@ -37,6 +37,7 @@ type ListView struct {
 	issues      []datasource.Issue
 	filtered    []datasource.Issue
 	sortCol     sortColumn
+	sortAsc     bool
 	sortKey     key.Binding
 	filterMode  bool
 	filterText  string
@@ -69,6 +70,7 @@ func NewListView() *ListView {
 	return &ListView{
 		table:       t,
 		sortCol:     sortByPriority,
+		sortAsc:     true,
 		sortKey:     key.NewBinding(key.WithKeys("s")),
 		filterInput: fi,
 		hideClosed:  true,
@@ -95,6 +97,9 @@ func (v *ListView) sortAndRefresh() {
 
 func (v *ListView) sortIssues() {
 	sort.SliceStable(v.issues, func(i, j int) bool {
+		if !v.sortAsc {
+			i, j = j, i
+		}
 		a, b := v.issues[i], v.issues[j]
 		switch v.sortCol {
 		case sortByPriority:
@@ -137,7 +142,11 @@ func (v *ListView) updateColumnHeaders() {
 	for i, h := range columnHeaders {
 		title := h
 		if sortColumn(i) == v.sortCol {
-			title = h + " ▲"
+			if v.sortAsc {
+				title = h + " ▲"
+			} else {
+				title = h + " ▼"
+			}
 		}
 		cols[i] = table.Column{Title: title, Width: widths[i]}
 	}
@@ -187,6 +196,12 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 
 		if key.Matches(msg, v.sortKey) {
 			v.sortCol = (v.sortCol + 1) % (sortByTitle + 1)
+			v.sortAsc = true
+			v.sortAndRefresh()
+			return nil
+		}
+		if msg.String() == "S" {
+			v.sortAsc = !v.sortAsc
 			v.sortAndRefresh()
 			return nil
 		}
@@ -289,6 +304,7 @@ func (v *ListView) StatusHints() []StatusHint {
 	}
 	hints := []StatusHint{
 		{Key: "s", Desc: "sort"},
+		{Key: "S", Desc: "reverse sort"},
 		{Key: "/", Desc: "filter"},
 		{Key: "c", Desc: closedDesc},
 		{Key: "enter", Desc: "open"},
