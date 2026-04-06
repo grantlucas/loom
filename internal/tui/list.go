@@ -18,10 +18,6 @@ type sortColumn int
 const (
 	sortByPriority sortColumn = iota
 	sortByStatus
-	sortByID
-	sortByType
-	sortByAssignee
-	sortByTitle
 )
 
 // statusOrder defines sort priority for issue statuses.
@@ -54,7 +50,6 @@ func NewListView() *ListView {
 		{Title: "P ▲", Width: 5},
 		{Title: "Type", Width: 8},
 		{Title: "Status", Width: 12},
-		{Title: "Assignee", Width: 14},
 		{Title: "Title", Width: 40},
 	}
 
@@ -103,17 +98,21 @@ func (v *ListView) sortIssues() {
 		a, b := v.issues[i], v.issues[j]
 		switch v.sortCol {
 		case sortByPriority:
-			return a.Priority < b.Priority
-		case sortByStatus:
+			aClosed := a.Status == "closed"
+			bClosed := b.Status == "closed"
+			if aClosed != bClosed {
+				return !aClosed
+			}
+			if a.Priority != b.Priority {
+				return a.Priority < b.Priority
+			}
 			return statusOrder[a.Status] < statusOrder[b.Status]
-		case sortByID:
-			return a.ID < b.ID
-		case sortByType:
-			return a.IssueType < b.IssueType
-		case sortByAssignee:
-			return a.Assignee < b.Assignee
-		default:
-			return a.Title < b.Title
+		default: // sortByStatus
+			sa, sb := statusOrder[a.Status], statusOrder[b.Status]
+			if sa != sb {
+				return sa < sb
+			}
+			return a.Priority < b.Priority
 		}
 	})
 }
@@ -127,21 +126,26 @@ func (v *ListView) rebuildRows() {
 			PlainPriority(issue.Priority),
 			issue.IssueType,
 			PlainStatus(issue) + " " + issue.Status,
-			issue.Assignee,
 			issue.Title,
 		}
 	}
 	v.table.SetRows(rows)
 }
 
-var columnHeaders = [...]string{"ID", "P", "Type", "Status", "Assignee", "Title"}
+var columnHeaders = [...]string{"ID", "P", "Type", "Status", "Title"}
+
+// sortColumnIndex maps each sortColumn to its position in columnHeaders.
+var sortColumnIndex = map[sortColumn]int{
+	sortByPriority: 1, // "P"
+	sortByStatus:   3, // "Status"
+}
 
 func (v *ListView) updateColumnHeaders() {
-	widths := []int{14, 5, 8, 12, 14, 40}
+	widths := []int{14, 5, 8, 12, 40}
 	cols := make([]table.Column, len(columnHeaders))
 	for i, h := range columnHeaders {
 		title := h
-		if sortColumn(i) == v.sortCol {
+		if i == sortColumnIndex[v.sortCol] {
 			if v.sortAsc {
 				title = h + " ▲"
 			} else {
@@ -195,7 +199,7 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 		}
 
 		if key.Matches(msg, v.sortKey) {
-			v.sortCol = (v.sortCol + 1) % (sortByTitle + 1)
+			v.sortCol = (v.sortCol + 1) % (sortByStatus + 1)
 			v.sortAsc = true
 			v.sortAndRefresh()
 			return nil
@@ -340,7 +344,7 @@ func (v *ListView) View() string {
 }
 
 // Fixed column widths for non-Title columns.
-var fixedColumnWidths = [...]int{14, 5, 8, 12, 14} // ID, P, Type, Status, Assignee
+var fixedColumnWidths = [...]int{14, 5, 8, 12} // ID, P, Type, Status
 
 const minTitleWidth = 10
 
@@ -359,11 +363,11 @@ func (v *ListView) Resize(width, height int) {
 	}
 
 	cols := v.table.Columns()
-	if len(cols) == 6 {
-		for i := 0; i < 5; i++ {
+	if len(cols) == 5 {
+		for i := 0; i < 4; i++ {
 			cols[i].Width = fixedColumnWidths[i]
 		}
-		cols[5].Width = titleWidth
+		cols[4].Width = titleWidth
 		v.table.SetColumns(cols)
 	}
 }

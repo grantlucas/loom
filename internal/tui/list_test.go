@@ -16,11 +16,14 @@ func TestListView_RendersColumnHeaders(t *testing.T) {
 	lv := NewListView()
 	view := lv.View()
 
-	headers := []string{"ID", "P", "Type", "Status", "Assignee", "Title"}
+	headers := []string{"ID", "P", "Type", "Status", "Title"}
 	for _, h := range headers {
 		if !strings.Contains(view, h) {
 			t.Errorf("expected view to contain column header %q", h)
 		}
+	}
+	if strings.Contains(view, "Assignee") {
+		t.Error("expected Assignee column to be removed")
 	}
 }
 
@@ -97,6 +100,58 @@ func TestListView_SortByPriority(t *testing.T) {
 	// Default sort is by priority ascending
 	if got := lv.SelectedIssueID(); got != "a-1" {
 		t.Errorf("expected first row 'a-1' (P1), got %q", got)
+	}
+}
+
+func TestListView_SortByPriority_ClosedAfterOpen(t *testing.T) {
+	lv := NewListView()
+	lv.Update(keyMsg('c')) // show closed issues
+	lv.SetIssues([]datasource.Issue{
+		{ID: "closed-p1", Priority: 1, Status: "closed", Title: "Done high"},
+		{ID: "open-p2", Priority: 2, Status: "open", Title: "Open med"},
+		{ID: "open-p1", Priority: 1, Status: "open", Title: "Open high"},
+		{ID: "wip-p1", Priority: 1, Status: "in_progress", Title: "Active high"},
+	})
+
+	// Priority sort ascending: open/in_progress P1, open P2, then closed P1
+	rows := lv.table.Rows()
+	// First should be open/in_progress P1 items
+	if rows[0][0] == "closed-p1" {
+		t.Error("closed issue should not appear before open issues at same priority")
+	}
+	// Last should be closed items
+	if rows[len(rows)-1][0] != "closed-p1" {
+		t.Errorf("expected closed issue last, got %q", rows[len(rows)-1][0])
+	}
+}
+
+func TestListView_SortByStatus_SecondaryByPriority(t *testing.T) {
+	lv := NewListView()
+	lv.Update(keyMsg('c')) // show closed issues
+	lv.SetIssues([]datasource.Issue{
+		{ID: "open-p3", Priority: 3, Status: "open", Title: "Open low"},
+		{ID: "open-p1", Priority: 1, Status: "open", Title: "Open high"},
+		{ID: "wip-p2", Priority: 2, Status: "in_progress", Title: "Active med"},
+		{ID: "wip-p1", Priority: 1, Status: "in_progress", Title: "Active high"},
+	})
+
+	// Switch to status sort
+	lv.Update(keyMsg('s'))
+
+	rows := lv.table.Rows()
+	// in_progress group should be sorted by priority: wip-p1 before wip-p2
+	if rows[0][0] != "wip-p1" {
+		t.Errorf("expected wip-p1 first (in_progress, P1), got %q", rows[0][0])
+	}
+	if rows[1][0] != "wip-p2" {
+		t.Errorf("expected wip-p2 second (in_progress, P2), got %q", rows[1][0])
+	}
+	// open group should be sorted by priority: open-p1 before open-p3
+	if rows[2][0] != "open-p1" {
+		t.Errorf("expected open-p1 third (open, P1), got %q", rows[2][0])
+	}
+	if rows[3][0] != "open-p3" {
+		t.Errorf("expected open-p3 fourth (open, P3), got %q", rows[3][0])
 	}
 }
 
@@ -199,11 +254,11 @@ func TestListView_InProgressIndicator(t *testing.T) {
 	}
 }
 
-func TestListView_SortCyclesThroughAllColumns(t *testing.T) {
+func TestListView_SortCyclesBetweenPriorityAndStatus(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
-		{ID: "b-2", Priority: 2, IssueType: "bug", Status: "open", Assignee: "bob", Title: "Zebra"},
-		{ID: "a-1", Priority: 1, IssueType: "task", Status: "in_progress", Assignee: "alice", Title: "Apple"},
+		{ID: "b-2", Priority: 2, Status: "open", Title: "Zebra"},
+		{ID: "a-1", Priority: 1, Status: "in_progress", Title: "Apple"},
 	})
 
 	// Default: sorted by priority — a-1 (P1) first
@@ -215,30 +270,6 @@ func TestListView_SortCyclesThroughAllColumns(t *testing.T) {
 	lv.Update(keyMsg('s'))
 	if got := lv.SelectedIssueID(); got != "a-1" {
 		t.Fatalf("status sort: expected 'a-1', got %q", got)
-	}
-
-	// s -> sortByID: a-1 before b-2
-	lv.Update(keyMsg('s'))
-	if got := lv.SelectedIssueID(); got != "a-1" {
-		t.Fatalf("ID sort: expected 'a-1', got %q", got)
-	}
-
-	// s -> sortByType: bug (b-2) before task (a-1)
-	lv.Update(keyMsg('s'))
-	if got := lv.SelectedIssueID(); got != "b-2" {
-		t.Fatalf("type sort: expected 'b-2', got %q", got)
-	}
-
-	// s -> sortByAssignee: alice (a-1) before bob (b-2)
-	lv.Update(keyMsg('s'))
-	if got := lv.SelectedIssueID(); got != "a-1" {
-		t.Fatalf("assignee sort: expected 'a-1', got %q", got)
-	}
-
-	// s -> sortByTitle: Apple (a-1) before Zebra (b-2)
-	lv.Update(keyMsg('s'))
-	if got := lv.SelectedIssueID(); got != "a-1" {
-		t.Fatalf("title sort: expected 'a-1', got %q", got)
 	}
 
 	// s -> wraps back to sortByPriority
@@ -256,13 +287,12 @@ func TestListView_RendersIssueData(t *testing.T) {
 			Priority:  1,
 			IssueType: "task",
 			Status:    "open",
-			Assignee:  "alice",
 			Title:     "Fix the widget",
 		},
 	})
 
 	view := lv.View()
-	for _, want := range []string{"loom-1", "P1", "task", "open", "alice", "Fix the widget"} {
+	for _, want := range []string{"loom-1", "P1", "task", "open", "Fix the widget"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("expected view to contain %q", want)
 		}
@@ -541,14 +571,13 @@ func TestListView_SetIssuesReappliesActiveFilter(t *testing.T) {
 func TestListView_Resize_TitleColumnExpandsWithWidth(t *testing.T) {
 	lv := NewListView()
 
-	// Default title width is 40
 	lv.Resize(80, 30)
 	cols80 := lv.table.Columns()
-	titleWidth80 := cols80[5].Width
+	titleWidth80 := cols80[4].Width
 
 	lv.Resize(160, 30)
 	cols160 := lv.table.Columns()
-	titleWidth160 := cols160[5].Width
+	titleWidth160 := cols160[4].Width
 
 	if titleWidth160 <= titleWidth80 {
 		t.Errorf("expected wider terminal to give wider Title column: got %d at 160w vs %d at 80w",
@@ -561,8 +590,8 @@ func TestListView_Resize_FixedColumnsStaySameWidth(t *testing.T) {
 	lv.Resize(120, 30)
 	cols := lv.table.Columns()
 
-	// ID=14, P=5, Type=8, Status=12, Assignee=14
-	expectedWidths := []int{14, 5, 8, 12, 14}
+	// ID=14, P=5, Type=8, Status=12
+	expectedWidths := []int{14, 5, 8, 12}
 	for i, want := range expectedWidths {
 		if cols[i].Width != want {
 			t.Errorf("column %d (%s): got width %d, want %d", i, cols[i].Title, cols[i].Width, want)
@@ -844,7 +873,7 @@ func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
 	lv := NewListView()
 	lv.Resize(40, 30) // very narrow
 	cols := lv.table.Columns()
-	titleWidth := cols[5].Width
+	titleWidth := cols[4].Width
 	if titleWidth < 10 {
 		t.Errorf("title column should have minimum width of 10, got %d", titleWidth)
 	}
