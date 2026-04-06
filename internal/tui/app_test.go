@@ -1804,6 +1804,32 @@ func TestApp_StatusBarPinnedToBottom(t *testing.T) {
 	}
 }
 
+func TestApp_RefreshAndGotoHintsOnAllTabs(t *testing.T) {
+	app := loadTestApp(t)
+
+	tabs := []struct {
+		key  rune
+		name string
+	}{
+		{'d', "dashboard"},
+		{'i', "issues"},
+		{'t', "tree"},
+	}
+
+	for _, tc := range tabs {
+		model, _ := app.Update(keyMsg(tc.key))
+		app = model.(App)
+
+		view := app.View()
+		if !strings.Contains(view, "refresh") {
+			t.Errorf("expected 'refresh' hint on %s tab", tc.name)
+		}
+		if !strings.Contains(view, "goto") {
+			t.Errorf("expected 'goto' hint on %s tab", tc.name)
+		}
+	}
+}
+
 func TestApp_FilterMode_BlocksGlobalKeys(t *testing.T) {
 	app := newTestApp()
 	// Switch to Issues tab

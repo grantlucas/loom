@@ -432,19 +432,12 @@ func TestDashboardView_ImplementsStatusHinter(t *testing.T) {
 	var _ StatusHinter = NewDashboardView()
 }
 
-func TestDashboardView_StatusHints(t *testing.T) {
+func TestDashboardView_StatusHints_Empty(t *testing.T) {
 	dv := NewDashboardView()
 	hints := dv.StatusHints()
 
-	keys := make(map[string]string)
-	for _, h := range hints {
-		keys[h.Key] = h.Desc
-	}
-
-	for _, k := range []string{"r", "g"} {
-		if _, ok := keys[k]; !ok {
-			t.Errorf("expected hint for key %q", k)
-		}
+	if len(hints) != 0 {
+		t.Errorf("expected no view-specific hints, got %d", len(hints))
 	}
 }
 

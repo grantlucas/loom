@@ -526,6 +526,8 @@ func (a App) globalHints() []StatusHint {
 		}
 	}
 	return []StatusHint{
+		{Key: "r", Desc: "refresh"},
+		{Key: "g", Desc: "goto"},
 		{Key: "?", Desc: "help"},
 		{Key: "q", Desc: "quit"},
 	}
