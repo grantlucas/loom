@@ -522,3 +522,25 @@ func TestDetailView_Resize_SetsViewportDimensions(t *testing.T) {
 		t.Error("expected viewport height < terminal height (overhead subtracted)")
 	}
 }
+
+func TestDetailView_View_WrapsLongDescription(t *testing.T) {
+	dv := NewDetailView()
+	// Set a narrow viewport width before setting detail
+	dv.Resize(40, 20)
+
+	detail := testDetail()
+	// Description longer than viewport width — should be wrapped
+	detail.Description = "This is a very long description that should be wrapped to fit within the viewport width limit"
+	dv.SetDetail(detail)
+
+	content := dv.renderContent()
+	lines := strings.Split(content, "\n")
+
+	for i, line := range lines {
+		// Allow some tolerance for ANSI sequences in styled lines
+		// but plain description lines should respect viewport width
+		if len(line) > 40 && strings.Contains(line, "description that should be wrapped") {
+			t.Errorf("line %d exceeds viewport width (len=%d): %q", i, len(line), line)
+		}
+	}
+}

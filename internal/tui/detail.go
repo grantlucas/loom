@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/grantlucas/loom/internal/datasource"
 )
@@ -171,7 +172,11 @@ func (v *DetailView) renderContent() string {
 	b.WriteString("\n")
 	b.WriteString(detailSectionStyle.Render("── Description ──────────────────────────────────"))
 	b.WriteString("\n\n")
-	b.WriteString(d.Description)
+	if v.viewport.Width > 0 {
+		b.WriteString(lipgloss.NewStyle().Width(v.viewport.Width).Render(d.Description))
+	} else {
+		b.WriteString(d.Description)
+	}
 	b.WriteString("\n")
 
 	// Dependencies
