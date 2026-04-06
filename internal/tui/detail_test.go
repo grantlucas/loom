@@ -544,3 +544,17 @@ func TestDetailView_View_WrapsLongDescription(t *testing.T) {
 		}
 	}
 }
+
+func TestDetailView_View_ShortDescriptionUnchanged(t *testing.T) {
+	dv := NewDetailView()
+	dv.Resize(80, 20)
+
+	detail := testDetail()
+	detail.Description = "Short desc"
+	dv.SetDetail(detail)
+
+	content := dv.renderContent()
+	if !strings.Contains(content, "Short desc") {
+		t.Error("expected short description to appear unchanged in content")
+	}
+}
