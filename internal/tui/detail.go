@@ -99,15 +99,17 @@ func (v *DetailView) Update(msg tea.Msg) tea.Cmd {
 			case key.Matches(kmsg, cursorDown):
 				if v.relationCursor < count-1 {
 					v.relationCursor++
+					v.syncViewport()
+					return nil
 				}
-				v.syncViewport()
-				return nil
+				// At bottom of list — let viewport scroll down
 			case key.Matches(kmsg, cursorUp):
 				if v.relationCursor > 0 {
 					v.relationCursor--
+					v.syncViewport()
+					return nil
 				}
-				v.syncViewport()
-				return nil
+				// At top of list — let viewport scroll up
 			}
 		}
 	}

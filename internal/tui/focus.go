@@ -186,15 +186,17 @@ func (fv *FocusView) Update(msg tea.Msg) tea.Cmd {
 		total := fv.totalLines()
 		if fv.cursor < total-1 {
 			fv.cursor++
+			fv.syncViewport()
+			return nil
 		}
-		fv.syncViewport()
-		return nil
+		// At bottom — let viewport scroll
 	case key.Matches(km, fv.upKey):
 		if fv.cursor > 0 {
 			fv.cursor--
+			fv.syncViewport()
+			return nil
 		}
-		fv.syncViewport()
-		return nil
+		// At top — let viewport scroll
 	case key.Matches(km, fv.sortKey):
 		fv.sortMode = (fv.sortMode + 1) % 4
 		fv.sortItems()

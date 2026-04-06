@@ -546,6 +546,24 @@ func TestFocusView_ViewportScrollsToFollowCursor(t *testing.T) {
 	}
 }
 
+func TestFocusView_ScrollsUpWhenCursorAtTop(t *testing.T) {
+	fv := newFocusViewPopulated()
+	fv.Resize(80, 5)
+
+	total := fv.totalLines()
+	for i := 0; i < total-1; i++ {
+		fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+	for i := 0; i < total-1; i++ {
+		fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	}
+	offsetBefore := fv.viewport.YOffset
+	fv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if fv.viewport.YOffset >= offsetBefore && offsetBefore > 0 {
+		t.Error("pressing k at cursor 0 should scroll viewport up")
+	}
+}
+
 func TestFocusView_ViewportRendersWhenSized(t *testing.T) {
 	fv := newFocusViewPopulated()
 	fv.Resize(80, 40)

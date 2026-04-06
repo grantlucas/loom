@@ -366,6 +366,26 @@ func TestTreeView_ViewportScrollsToFollowCursor(t *testing.T) {
 	}
 }
 
+func TestTreeView_ScrollsUpWhenCursorAtTop(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.Resize(80, 5) // small viewport
+
+	// Scroll down
+	for i := 0; i < len(tv.flatNodes)-1; i++ {
+		tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+	// Go back to top
+	for i := 0; i < len(tv.flatNodes)-1; i++ {
+		tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	}
+	// Press k again at cursor 0 — should scroll viewport up
+	offsetBefore := tv.viewport.YOffset
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if tv.viewport.YOffset >= offsetBefore && offsetBefore > 0 {
+		t.Error("pressing k at cursor 0 should scroll viewport up")
+	}
+}
+
 func TestTreeView_ViewportRendersWhenSized(t *testing.T) {
 	tv := newTreeViewWithIssues()
 	tv.Resize(80, 20)

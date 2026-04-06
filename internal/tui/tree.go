@@ -139,15 +139,17 @@ func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
 	case key.Matches(km, tv.downKey):
 		if tv.cursor < len(tv.flatNodes)-1 {
 			tv.cursor++
+			tv.syncViewport()
+			return nil
 		}
-		tv.syncViewport()
-		return nil
+		// At bottom — let viewport scroll
 	case key.Matches(km, tv.upKey):
 		if tv.cursor > 0 {
 			tv.cursor--
+			tv.syncViewport()
+			return nil
 		}
-		tv.syncViewport()
-		return nil
+		// At top — let viewport scroll
 	case key.Matches(km, tv.collapKey):
 		if tv.cursor >= 0 && tv.cursor < len(tv.flatNodes) {
 			node := tv.flatNodes[tv.cursor]

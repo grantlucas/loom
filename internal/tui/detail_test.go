@@ -522,6 +522,49 @@ func TestDetailView_ViewportScrollsToFollowRelationCursor(t *testing.T) {
 	}
 }
 
+func TestDetailView_ScrollsUpWhenCursorAtTopOfList(t *testing.T) {
+	dv := NewDetailView()
+	d := testDetail()
+	d.Dependents = make([]datasource.ExpandedRelation, 20)
+	for i := range d.Dependents {
+		d.Dependents[i] = datasource.ExpandedRelation{
+			ID:     fmt.Sprintf("dep-%d", i),
+			Title:  fmt.Sprintf("Dependent %d", i),
+			Status: "open",
+		}
+	}
+	dv.Resize(80, 12) // small viewport
+	dv.SetDetail(d)
+
+	// Scroll down to a relation so the top of the page is out of view
+	for i := 0; i < 15; i++ {
+		dv.Update(keyMsg('j'))
+	}
+	scrolledOffset := dv.viewport.YOffset
+
+	// Now go back up to cursor 0
+	for i := 0; i < 15; i++ {
+		dv.Update(keyMsg('k'))
+	}
+	if dv.relationCursor != 0 {
+		t.Fatalf("expected cursor at 0, got %d", dv.relationCursor)
+	}
+
+	// Press k again — cursor can't go higher, so viewport should scroll up
+	dv.Update(keyMsg('k'))
+	if dv.viewport.YOffset >= scrolledOffset {
+		t.Error("pressing k at cursor 0 should scroll viewport up")
+	}
+
+	// Keep pressing k until viewport reaches top
+	for i := 0; i < 50; i++ {
+		dv.Update(keyMsg('k'))
+	}
+	if dv.viewport.YOffset != 0 {
+		t.Errorf("repeated k presses should scroll viewport to top, got offset %d", dv.viewport.YOffset)
+	}
+}
+
 var errTest = errForTest("test error")
 
 type errForTest string

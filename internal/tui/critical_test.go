@@ -407,6 +407,24 @@ func TestCriticalPathView_ViewportScrollsToFollowCursor(t *testing.T) {
 	}
 }
 
+func TestCriticalPathView_ScrollsUpWhenCursorAtTop(t *testing.T) {
+	cv := newCriticalViewWithChain()
+	cv.Resize(80, 5)
+
+	total := cv.totalNodes()
+	for i := 0; i < total-1; i++ {
+		cv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	}
+	for i := 0; i < total-1; i++ {
+		cv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	}
+	offsetBefore := cv.viewport.YOffset
+	cv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if cv.viewport.YOffset >= offsetBefore && offsetBefore > 0 {
+		t.Error("pressing k at cursor 0 should scroll viewport up")
+	}
+}
+
 func TestCriticalPathView_ViewportRendersWhenSized(t *testing.T) {
 	cv := newCriticalViewWithChain()
 	cv.Resize(80, 20)

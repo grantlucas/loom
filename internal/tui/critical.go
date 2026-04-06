@@ -138,15 +138,17 @@ func (cv *CriticalPathView) Update(msg tea.Msg) tea.Cmd {
 		total := cv.totalNodes()
 		if cv.cursor < total-1 {
 			cv.cursor++
+			cv.syncViewport()
+			return nil
 		}
-		cv.syncViewport()
-		return nil
+		// At bottom — let viewport scroll
 	case key.Matches(km, cv.upKey):
 		if cv.cursor > 0 {
 			cv.cursor--
+			cv.syncViewport()
+			return nil
 		}
-		cv.syncViewport()
-		return nil
+		// At top — let viewport scroll
 	case key.Matches(km, cv.priKey):
 		cv.sortMode = critSortByPriority
 		cv.sortChains()
