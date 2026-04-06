@@ -203,6 +203,12 @@ func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 
+		if msg.Type == tea.KeyEscape && v.filterText != "" {
+			v.filterText = ""
+			v.filterInput.Reset()
+			v.applyFilter()
+			return nil
+		}
 		if key.Matches(msg, v.sortKey) {
 			v.sortCol = (v.sortCol + 1) % (sortByStatus + 1)
 			v.sortAsc = true

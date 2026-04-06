@@ -438,6 +438,40 @@ func TestListView_EscExitsFilterMode(t *testing.T) {
 	}
 }
 
+func TestListView_EscClearsActiveFilterOutsideFilterMode(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a-1", Title: "Login bug", Status: "open"},
+		{ID: "a-2", Title: "Dashboard", Status: "open"},
+	})
+
+	// Enter filter mode, type a filter, confirm with Enter (exits filter mode)
+	enterFilterMode(lv)
+	typeText(lv, "login")
+	lv.Update(enterKey())
+
+	// Verify filter is active but filter mode is off
+	if lv.IsCapturingInput() {
+		t.Fatal("expected filter mode to be off after Enter")
+	}
+	if !strings.Contains(lv.StatusInfo(), "1 of 2") {
+		t.Fatalf("expected active filter showing '1 of 2', got: %q", lv.StatusInfo())
+	}
+
+	// Now press Esc outside filter mode — should clear the active filter
+	lv.Update(escKey())
+
+	if lv.IsCapturingInput() {
+		t.Error("expected filter mode to remain off after Esc")
+	}
+	if !strings.Contains(lv.StatusInfo(), "2 issues") {
+		t.Errorf("expected Esc to clear filter and show '2 issues', got: %q", lv.StatusInfo())
+	}
+	if lv.InfoLineView() != "" {
+		t.Errorf("expected empty InfoLineView after clearing filter, got: %q", lv.InfoLineView())
+	}
+}
+
 func TestListView_FreetextFilterMatchesTitleAndID(t *testing.T) {
 	lv := NewListView()
 	lv.SetIssues([]datasource.Issue{
