@@ -902,6 +902,46 @@ func TestListView_StatusHints_ShowsSortDirection(t *testing.T) {
 	}
 }
 
+// --- JumpToTop / JumpToBottom ---
+
+func TestListView_JumpToTop_MovesToFirstRow(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 2},
+		{ID: "c", Status: "open", Priority: 3},
+	})
+	// Move down
+	lv.Update(tea.KeyMsg{Type: tea.KeyDown})
+	lv.Update(tea.KeyMsg{Type: tea.KeyDown})
+	lv.JumpToTop()
+	if lv.SelectedIssueID() != "a" {
+		t.Errorf("expected first issue 'a' after JumpToTop, got %q", lv.SelectedIssueID())
+	}
+}
+
+func TestListView_JumpToBottom_MovesToLastRow(t *testing.T) {
+	lv := NewListView()
+	lv.SetIssues([]datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 2},
+		{ID: "c", Status: "open", Priority: 3},
+	})
+	lv.JumpToBottom()
+	if lv.SelectedIssueID() != "c" {
+		t.Errorf("expected last issue 'c' after JumpToBottom, got %q", lv.SelectedIssueID())
+	}
+}
+
+func TestListView_JumpToTop_EmptyTable_IsNoop(t *testing.T) {
+	lv := NewListView()
+	lv.JumpToTop() // should not panic
+}
+
+func TestListView_ImplementsJumper(t *testing.T) {
+	var _ Jumper = NewListView()
+}
+
 func TestListView_Resize_NarrowTerminalClampsTitleToMinimum(t *testing.T) {
 	lv := NewListView()
 	lv.Resize(40, 30) // very narrow

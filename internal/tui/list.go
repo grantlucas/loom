@@ -162,6 +162,16 @@ func (v *ListView) SelectedIssueID() string {
 	return row[0]
 }
 
+// JumpToTop moves the table cursor to the first row.
+func (v *ListView) JumpToTop() {
+	v.table.GotoTop()
+}
+
+// JumpToBottom moves the table cursor to the last row.
+func (v *ListView) JumpToBottom() {
+	v.table.GotoBottom()
+}
+
 // IsCapturingInput returns true when the filter input is focused.
 func (v *ListView) IsCapturingInput() bool {
 	return v.filterMode
