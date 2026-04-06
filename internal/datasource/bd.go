@@ -69,9 +69,9 @@ func NewClient(exec Executor) *Client {
 	return &Client{exec: exec}
 }
 
-// ListIssues runs bd list --json and returns parsed issues.
+// ListIssues runs bd list --all --json and returns parsed issues.
 func (c *Client) ListIssues() ([]Issue, error) {
-	data, err := c.exec.Execute("list", "--json")
+	data, err := c.exec.Execute("list", "--all", "--json")
 	if err != nil {
 		return nil, err
 	}

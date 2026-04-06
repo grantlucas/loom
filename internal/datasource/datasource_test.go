@@ -277,8 +277,8 @@ func TestClientListIssues(t *testing.T) {
 		t.Fatalf("expected 1 call, got %d", len(mock.calls))
 	}
 	args := mock.calls[0]
-	if len(args) != 2 || args[0] != "list" || args[1] != "--json" {
-		t.Errorf("args = %v, want [list --json]", args)
+	if len(args) != 3 || args[0] != "list" || args[1] != "--all" || args[2] != "--json" {
+		t.Errorf("args = %v, want [list --all --json]", args)
 	}
 }
 
