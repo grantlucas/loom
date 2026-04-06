@@ -42,7 +42,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 	cache := datasource.NewCache(client, cfg.Interval)
 
 	app := tui.NewApp(cache, cfg.Interval, cfg.Watch)
-	p := tea.NewProgram(app, tea.WithOutput(stderr))
+	p := tea.NewProgram(app, tea.WithOutput(stderr), tea.WithAltScreen())
 	_, err = p.Run()
 	return err
 }
