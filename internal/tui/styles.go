@@ -80,6 +80,10 @@ var (
 	hintDescStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 	hintSepStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
 
+	// Info line style (secondary status line below hints)
+	infoLineStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("243"))
+
 	// Status bar container with top border
 	statusBarContainerStyle = lipgloss.NewStyle().
 				BorderTop(true).

@@ -83,3 +83,32 @@ func TestRenderStatusBar_ZeroWidth(t *testing.T) {
 		t.Errorf("expected empty string for zero width, got %q", result)
 	}
 }
+
+func TestRenderInfoLine_FormatsText(t *testing.T) {
+	result := renderInfoLine("3 issues", 80)
+	if !strings.Contains(result, "3 issues") {
+		t.Errorf("expected result to contain '3 issues', got %q", result)
+	}
+}
+
+func TestRenderInfoLine_EmptyString(t *testing.T) {
+	result := renderInfoLine("", 80)
+	if result != "" {
+		t.Errorf("expected empty string for empty info, got %q", result)
+	}
+}
+
+func TestRenderInfoLine_ZeroWidth(t *testing.T) {
+	result := renderInfoLine("3 issues", 0)
+	if result != "" {
+		t.Errorf("expected empty string for zero width, got %q", result)
+	}
+}
+
+func TestRenderInfoLine_TruncatesAtWidth(t *testing.T) {
+	result := renderInfoLine("this is a very long info line that exceeds the width", 20)
+	visibleWidth := lipgloss.Width(result)
+	if visibleWidth > 20 {
+		t.Errorf("rendered width %d exceeds max width 20", visibleWidth)
+	}
+}

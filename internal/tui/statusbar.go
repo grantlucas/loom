@@ -17,6 +17,12 @@ type StatusHinter interface {
 	StatusHints() []StatusHint
 }
 
+// StatusInfoer is optionally implemented by views that provide contextual info
+// for the secondary status line (e.g. issue counts).
+type StatusInfoer interface {
+	StatusInfo() string
+}
+
 // renderStatusBar renders a single-line status bar from the given hints.
 // Format: "key desc · key desc · key desc", truncated to fit width.
 func renderStatusBar(hints []StatusHint, width int) string {
@@ -52,4 +58,18 @@ func renderStatusBar(hints []StatusHint, width int) string {
 	}
 
 	return strings.Join(parts, sep)
+}
+
+// renderInfoLine renders a single-line info bar from the given text.
+// Returns empty string if info is empty or width is zero.
+func renderInfoLine(info string, width int) string {
+	if info == "" || width <= 0 {
+		return ""
+	}
+	rendered := infoLineStyle.Render(info)
+	if lipgloss.Width(rendered) > width {
+		// Truncate to fit
+		rendered = infoLineStyle.Width(width).MaxWidth(width).Render(info)
+	}
+	return rendered
 }

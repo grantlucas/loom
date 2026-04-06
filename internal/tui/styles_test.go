@@ -259,6 +259,13 @@ func TestRenderSectionHeader_ContainsDashes(t *testing.T) {
 	}
 }
 
+func TestInfoLineStyle_HasForegroundColor(t *testing.T) {
+	fg := infoLineStyle.GetForeground()
+	if fg == (lipgloss.NoColor{}) {
+		t.Error("info line style should have a foreground color")
+	}
+}
+
 func TestStatusBarContainerStyle_HasTopBorder(t *testing.T) {
 	if !statusBarContainerStyle.GetBorderTop() {
 		t.Error("status bar container style should have a top border")
