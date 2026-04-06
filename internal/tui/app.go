@@ -89,6 +89,7 @@ type App struct {
 	history   []string
 	gotoMode  bool
 	gotoInput textinput.Model
+	gPending  bool
 	width      int
 	height     int
 	loading    bool
@@ -274,6 +275,33 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd := v.Update(msg)
 				return a, cmd
 			}
+		}
+
+		// Handle G (shift+g) — jump to bottom
+		if msg.String() == "G" {
+			a.gPending = false
+			if j, ok := a.views[a.activeTab].(Jumper); ok {
+				j.JumpToBottom()
+			}
+			return a, nil
+		}
+
+		// Handle g prefix for gg navigation
+		if msg.String() == "g" {
+			if a.gPending {
+				a.gPending = false
+				if j, ok := a.views[a.activeTab].(Jumper); ok {
+					j.JumpToTop()
+				}
+				return a, nil
+			}
+			a.gPending = true
+			return a, nil
+		}
+
+		// Any other key cancels gPending and processes normally
+		if a.gPending {
+			a.gPending = false
 		}
 
 		switch {

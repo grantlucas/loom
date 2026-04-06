@@ -1366,6 +1366,83 @@ func TestApp_HelpOverlay_ShowsEnterAndEsc(t *testing.T) {
 	}
 }
 
+// --- gg / G navigation ---
+
+func TestApp_ShiftG_JumpsToBottom_TreeView(t *testing.T) {
+	app := newTestApp()
+	// Load issues and switch to tree tab
+	model, _ := app.Update(IssuesLoadedMsg{Issues: []datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 2},
+		{ID: "c", Status: "open", Priority: 3},
+	}})
+	app = model.(App)
+	model, _ = app.Update(keyMsg('t'))
+	app = model.(App)
+
+	// Press G (shift+g)
+	model, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'G'}})
+	app = model.(App)
+
+	tv := app.views[TabTree].(*TreeView)
+	if tv.cursor != len(tv.flatNodes)-1 {
+		t.Errorf("expected cursor at bottom (%d), got %d", len(tv.flatNodes)-1, tv.cursor)
+	}
+}
+
+func TestApp_DoubleG_JumpsToTop_TreeView(t *testing.T) {
+	app := newTestApp()
+	model, _ := app.Update(IssuesLoadedMsg{Issues: []datasource.Issue{
+		{ID: "a", Status: "open", Priority: 1},
+		{ID: "b", Status: "open", Priority: 2},
+		{ID: "c", Status: "open", Priority: 3},
+	}})
+	app = model.(App)
+	model, _ = app.Update(keyMsg('t'))
+	app = model.(App)
+
+	// Move cursor down first
+	tv := app.views[TabTree].(*TreeView)
+	tv.cursor = len(tv.flatNodes) - 1
+
+	// Press g, then g again
+	model, _ = app.Update(keyMsg('g'))
+	app = model.(App)
+	model, _ = app.Update(keyMsg('g'))
+	app = model.(App)
+
+	tv = app.views[TabTree].(*TreeView)
+	if tv.cursor != 0 {
+		t.Errorf("expected cursor at top (0), got %d", tv.cursor)
+	}
+}
+
+func TestApp_GPending_CancelledByOtherKey(t *testing.T) {
+	app := newTestApp()
+	model, _ := app.Update(keyMsg('g'))
+	app = model.(App)
+	if !app.gPending {
+		t.Error("expected gPending after pressing g")
+	}
+
+	// Press 'd' (dashboard) - should cancel gPending and switch tab
+	model, _ = app.Update(keyMsg('d'))
+	app = model.(App)
+	if app.gPending {
+		t.Error("expected gPending cancelled after pressing d")
+	}
+	if app.activeTab != TabDashboard {
+		t.Error("expected d key to switch to dashboard after cancelling gPending")
+	}
+}
+
+func TestApp_GPending_DefaultOff(t *testing.T) {
+	app := newTestApp()
+	if app.gPending {
+		t.Error("gPending should be off by default")
+	}
+}
+
 func TestNewApp_RegistersDashboardView(t *testing.T) {
 	app := newTestApp()
 	v, ok := app.views[TabDashboard]
