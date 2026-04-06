@@ -151,6 +151,20 @@ func (tv *TreeView) titleMaxWidth() int {
 	return maxW
 }
 
+// JumpToTop moves the cursor to the first node.
+func (tv *TreeView) JumpToTop() {
+	tv.cursor = 0
+	tv.syncViewport()
+}
+
+// JumpToBottom moves the cursor to the last node.
+func (tv *TreeView) JumpToBottom() {
+	if len(tv.flatNodes) > 0 {
+		tv.cursor = len(tv.flatNodes) - 1
+	}
+	tv.syncViewport()
+}
+
 // Update handles key messages.
 func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
 	km, ok := msg.(tea.KeyMsg)

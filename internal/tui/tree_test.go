@@ -226,6 +226,46 @@ func TestTreeView_CursorClampTop(t *testing.T) {
 	}
 }
 
+// --- JumpToTop / JumpToBottom ---
+
+func TestTreeView_JumpToTop_MovesCursorToZero(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.cursor = len(tv.flatNodes) - 1 // move to bottom
+	tv.JumpToTop()
+	if tv.cursor != 0 {
+		t.Errorf("expected cursor 0 after JumpToTop, got %d", tv.cursor)
+	}
+}
+
+func TestTreeView_JumpToBottom_MovesCursorToLast(t *testing.T) {
+	tv := newTreeViewWithIssues()
+	tv.JumpToBottom()
+	want := len(tv.flatNodes) - 1
+	if tv.cursor != want {
+		t.Errorf("expected cursor %d after JumpToBottom, got %d", want, tv.cursor)
+	}
+}
+
+func TestTreeView_JumpToTop_EmptyNodes_IsNoop(t *testing.T) {
+	tv := NewTreeView()
+	tv.JumpToTop() // should not panic
+	if tv.cursor != 0 {
+		t.Errorf("expected cursor 0, got %d", tv.cursor)
+	}
+}
+
+func TestTreeView_JumpToBottom_EmptyNodes_IsNoop(t *testing.T) {
+	tv := NewTreeView()
+	tv.JumpToBottom() // should not panic
+	if tv.cursor != 0 {
+		t.Errorf("expected cursor 0, got %d", tv.cursor)
+	}
+}
+
+func TestTreeView_ImplementsJumper(t *testing.T) {
+	var _ Jumper = NewTreeView()
+}
+
 // --- SelectedNodeID ---
 
 func TestTreeView_SelectedNodeID(t *testing.T) {

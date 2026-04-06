@@ -70,6 +70,12 @@ type InputCapturer interface {
 	IsCapturingInput() bool
 }
 
+// Jumper is optionally implemented by views that support Vim-style gg/G navigation.
+type Jumper interface {
+	JumpToTop()
+	JumpToBottom()
+}
+
 // App is the root Bubble Tea model for Loom.
 type App struct {
 	activeTab Tab
