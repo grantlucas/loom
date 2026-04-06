@@ -483,7 +483,7 @@ func (a App) renderTabBar() string {
 	if a.watchMode {
 		tabs = append(tabs, watchIndicatorStyle.Render("WATCH"))
 	}
-	joined := lipgloss.JoinHorizontal(lipgloss.Bottom, tabs...)
+	joined := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 
 	// Fill remaining width with a border line on the bottom row
 	joinedWidth := lipgloss.Width(joined)
