@@ -62,6 +62,12 @@ type View interface {
 	Resize(width, height int)
 }
 
+// InputCapturer is optionally implemented by views that capture keyboard input
+// (e.g. a text filter). When active, global shortcuts should be suppressed.
+type InputCapturer interface {
+	IsCapturingInput() bool
+}
+
 // App is the root Bubble Tea model for Loom.
 type App struct {
 	activeTab Tab
@@ -235,6 +241,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			default:
 				var cmd tea.Cmd
 				a.gotoInput, cmd = a.gotoInput.Update(msg)
+				return a, cmd
+			}
+		}
+
+		// If the active view is capturing input, delegate to it directly.
+		if v, ok := a.views[a.activeTab]; ok {
+			if ic, ok := v.(InputCapturer); ok && ic.IsCapturingInput() {
+				cmd := v.Update(msg)
 				return a, cmd
 			}
 		}

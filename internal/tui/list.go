@@ -152,6 +152,11 @@ func (v *ListView) SelectedIssueID() string {
 	return row[0]
 }
 
+// IsCapturingInput returns true when the filter input is focused.
+func (v *ListView) IsCapturingInput() bool {
+	return v.filterMode
+}
+
 // Update handles input messages.
 func (v *ListView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {

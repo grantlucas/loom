@@ -1687,3 +1687,38 @@ func TestApp_TabBarShowsShortcuts(t *testing.T) {
 		t.Error("Detail tab should not show a shortcut key")
 	}
 }
+
+func TestApp_FilterInactive_AllowsGlobalKeys(t *testing.T) {
+	app := newTestApp()
+	// Switch to Issues tab
+	model, _ := app.Update(keyMsg('i'))
+	app = model.(App)
+
+	// Press 't' without filter active — should switch to tree view
+	model, _ = app.Update(keyMsg('t'))
+	app = model.(App)
+	if app.activeTab != TabTree {
+		t.Errorf("expected Tree tab, got tab %d", app.activeTab)
+	}
+}
+
+func TestApp_FilterMode_BlocksGlobalKeys(t *testing.T) {
+	app := newTestApp()
+	// Switch to Issues tab
+	model, _ := app.Update(keyMsg('i'))
+	app = model.(App)
+	if app.activeTab != TabIssues {
+		t.Fatal("expected Issues tab")
+	}
+
+	// Enter filter mode with '/'
+	model, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	app = model.(App)
+
+	// Press 't' — should NOT switch to tree view
+	model, _ = app.Update(keyMsg('t'))
+	app = model.(App)
+	if app.activeTab != TabIssues {
+		t.Errorf("expected to stay on Issues tab, got tab %d", app.activeTab)
+	}
+}
