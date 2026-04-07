@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -507,5 +508,73 @@ func TestTreeView_StatusInfo_NoIssues(t *testing.T) {
 	info := tv.StatusInfo()
 	if info != "" {
 		t.Errorf("expected empty StatusInfo with no issues, got: %q", info)
+	}
+}
+
+// --- Ctrl-D / Ctrl-U page scroll cursor tracking ---
+
+func newLargeTreeView() *TreeView {
+	tv := NewTreeView()
+	issues := make([]datasource.Issue, 30)
+	for i := range issues {
+		issues[i] = datasource.Issue{
+			ID:       fmt.Sprintf("node-%02d", i),
+			Status:   "open",
+			Priority: 1,
+			Title:    fmt.Sprintf("Node %d", i),
+		}
+	}
+	tv.SetIssues(issues)
+	tv.Resize(80, 14) // 14 - 2 overhead = 12 viewport lines
+	return tv
+}
+
+func TestTreeView_CtrlD_MovesCursorToMiddle(t *testing.T) {
+	tv := newLargeTreeView()
+	// Cursor starts at 0, send Ctrl-D (half page down)
+	tv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	if tv.cursor == 0 {
+		t.Error("expected cursor to move from 0 after Ctrl-D")
+	}
+	// Cursor should be near middle of visible area
+	mid := tv.viewport.YOffset + tv.viewport.Height/2 - 2
+	if tv.cursor != mid {
+		t.Errorf("expected cursor at %d (viewport middle), got %d", mid, tv.cursor)
+	}
+}
+
+func TestTreeView_CtrlU_MovesCursorToMiddle(t *testing.T) {
+	tv := newLargeTreeView()
+	// First scroll down
+	tv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	tv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	// Now scroll back up
+	tv.Update(tea.KeyMsg{Type: tea.KeyCtrlU})
+	mid := tv.viewport.YOffset + tv.viewport.Height/2 - 2
+	if tv.cursor != mid {
+		t.Errorf("expected cursor at %d (viewport middle), got %d", mid, tv.cursor)
+	}
+}
+
+func TestTreeView_CtrlD_CursorClampedAtEnd(t *testing.T) {
+	tv := newLargeTreeView()
+	// Scroll down many times past the end
+	for i := 0; i < 20; i++ {
+		tv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	}
+	if tv.cursor >= len(tv.flatNodes) {
+		t.Errorf("cursor %d should be < item count %d", tv.cursor, len(tv.flatNodes))
+	}
+}
+
+func TestTreeView_JkAtEdge_DoesNotJumpCursor(t *testing.T) {
+	tv := newLargeTreeView()
+	// Move cursor to last item
+	tv.JumpToBottom()
+	lastCursor := tv.cursor
+	// Press j at bottom — cursor should stay, viewport may scroll by 1
+	tv.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if tv.cursor != lastCursor {
+		t.Errorf("j at bottom should keep cursor at %d, got %d", lastCursor, tv.cursor)
 	}
 }

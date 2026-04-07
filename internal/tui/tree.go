@@ -209,8 +209,13 @@ func (tv *TreeView) Update(msg tea.Msg) tea.Cmd {
 		return nil
 	}
 
+	offsetBefore := tv.viewport.YOffset
 	var cmd tea.Cmd
 	tv.viewport, cmd = tv.viewport.Update(msg)
+	if delta := tv.viewport.YOffset - offsetBefore; delta > 1 || delta < -1 {
+		cursorToViewportMiddle(&tv.viewport, &tv.cursor, len(tv.flatNodes), 2)
+		tv.syncViewport()
+	}
 	return cmd
 }
 
