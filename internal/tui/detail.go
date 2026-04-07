@@ -147,9 +147,50 @@ func (v *DetailView) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 	}
+	offsetBefore := v.viewport.YOffset
 	var cmd tea.Cmd
 	v.viewport, cmd = v.viewport.Update(msg)
+	if delta := v.viewport.YOffset - offsetBefore; delta > 1 || delta < -1 {
+		count := v.RelationCount()
+		if count > 0 {
+			v.relationCursor = v.relationNearViewportMiddle()
+			v.syncViewport()
+		}
+	}
 	return cmd
+}
+
+// relationNearViewportMiddle returns the relation index whose rendered line is
+// closest to the vertical center of the viewport.
+func (v *DetailView) relationNearViewportMiddle() int {
+	content := v.renderContent()
+	lines := strings.Split(content, "\n")
+	mid := v.viewport.YOffset + v.viewport.Height/2
+
+	relIdx := 0
+	bestIdx := 0
+	bestDist := -1
+	for i, line := range lines {
+		if isRelationLine(line) {
+			dist := mid - i
+			if dist < 0 {
+				dist = -dist
+			}
+			if bestDist < 0 || dist < bestDist {
+				bestDist = dist
+				bestIdx = relIdx
+			}
+			relIdx++
+		}
+	}
+	return bestIdx
+}
+
+// isRelationLine returns true if the line contains a relation status indicator.
+func isRelationLine(line string) bool {
+	return strings.Contains(line, "✓") ||
+		strings.Contains(line, "◐") ||
+		strings.Contains(line, "○")
 }
 
 // syncViewport updates the viewport content and scrolls to keep the relation cursor visible.

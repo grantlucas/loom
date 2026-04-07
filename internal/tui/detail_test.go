@@ -720,3 +720,75 @@ func TestDetailView_StatusInfo_NoIssue(t *testing.T) {
 		t.Errorf("expected empty StatusInfo with no issue, got: %q", info)
 	}
 }
+
+// --- Ctrl-D / Ctrl-U page scroll cursor tracking ---
+
+func testDetailWithManyRelations() *datasource.IssueDetail {
+	d := testDetail()
+	d.Dependents = make([]datasource.ExpandedRelation, 30)
+	for i := range d.Dependents {
+		d.Dependents[i] = datasource.ExpandedRelation{
+			ID:     fmt.Sprintf("dep-%02d", i),
+			Title:  fmt.Sprintf("Dependent %d", i),
+			Status: "open",
+		}
+	}
+	return d
+}
+
+func TestDetailView_CtrlD_MovesCursorFromZero(t *testing.T) {
+	dv := NewDetailView()
+	dv.Resize(80, 12) // small viewport to force scrolling
+	dv.SetDetail(testDetailWithManyRelations())
+
+	// Scroll down past the header/description area into the relations
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	if dv.relationCursor == 0 {
+		t.Error("expected cursor to move from 0 after multiple Ctrl-D presses")
+	}
+}
+
+func TestDetailView_CtrlU_MovesCursorBack(t *testing.T) {
+	dv := NewDetailView()
+	dv.Resize(80, 16)
+	dv.SetDetail(testDetailWithManyRelations())
+
+	// Scroll down twice
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	afterDown := dv.relationCursor
+	// Scroll back up
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlU})
+	if dv.relationCursor >= afterDown {
+		t.Errorf("expected cursor to decrease after Ctrl-U, got %d (was %d)", dv.relationCursor, afterDown)
+	}
+}
+
+func TestDetailView_CtrlD_CursorClampedAtEnd(t *testing.T) {
+	dv := NewDetailView()
+	dv.Resize(80, 16)
+	dv.SetDetail(testDetailWithManyRelations())
+	count := dv.RelationCount()
+
+	for i := 0; i < 50; i++ {
+		dv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	}
+	if dv.relationCursor >= count {
+		t.Errorf("cursor %d should be < relation count %d", dv.relationCursor, count)
+	}
+}
+
+func TestDetailView_CtrlD_NoRelations_NoPanic(t *testing.T) {
+	dv := NewDetailView()
+	d := testDetail()
+	d.Dependencies = nil
+	d.Dependents = nil
+	dv.Resize(80, 16)
+	dv.SetDetail(d)
+
+	// Should not panic
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlD})
+	dv.Update(tea.KeyMsg{Type: tea.KeyCtrlU})
+}
