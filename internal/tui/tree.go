@@ -130,7 +130,7 @@ func (tv *TreeView) SelectedNodeID() string {
 // Resize adapts the tree layout to the given terminal dimensions.
 func (tv *TreeView) Resize(width, height int) {
 	tv.width = width
-	contentHeight := height - 4 // tab bar (3 lines) + newline (1)
+	contentHeight := height - 1 // newline before tree content
 	if contentHeight < 1 {
 		contentHeight = 1
 	}

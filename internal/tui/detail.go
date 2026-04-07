@@ -115,8 +115,8 @@ var (
 
 // Resize adapts the detail layout to the given terminal dimensions.
 func (v *DetailView) Resize(width, height int) {
-	// Subtract overhead for tab bar (3 lines) + newline (1) + breadcrumb (1)
-	contentHeight := height - 5
+	// Subtract overhead for breadcrumb (1) + newline (1)
+	contentHeight := height - 2
 	if contentHeight < 1 {
 		contentHeight = 1
 	}

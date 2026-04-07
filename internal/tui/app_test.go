@@ -1844,18 +1844,18 @@ func TestApp_View_InfoLineBelowHints(t *testing.T) {
 	}
 }
 
-func TestApp_HeightReservation_ThreeLines(t *testing.T) {
+func TestApp_HeightReservation_SixLines(t *testing.T) {
 	app := newTestApp()
 	model, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	app = model.(App)
 
-	// Views should get height - 3 (border + hints + info)
+	// Views should get height - 6 (3 status bar + 2 tab bar + 1 newline)
 	lv, ok := app.views[TabIssues].(*ListView)
 	if !ok {
 		t.Fatal("expected ListView")
 	}
-	if lv.height != 27 {
-		t.Errorf("expected ListView height 27 (30-3), got %d", lv.height)
+	if lv.height != 24 {
+		t.Errorf("expected ListView height 24 (30-6), got %d", lv.height)
 	}
 }
 

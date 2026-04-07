@@ -222,7 +222,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
 		a.height = msg.Height
-		contentHeight := msg.Height - 3 // reserve 3 lines for status bar (border + hints + info)
+		contentHeight := msg.Height - 6 // 3 status bar (border+hints+info) + 2 tab bar + 1 newline
 		for _, v := range a.views {
 			v.Resize(msg.Width, contentHeight)
 		}
