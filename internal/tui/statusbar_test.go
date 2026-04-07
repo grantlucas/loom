@@ -76,6 +76,14 @@ func TestRenderStatusBar_TruncatesAtWidth(t *testing.T) {
 	}
 }
 
+func TestRenderStatusBar_WidthTooNarrowForAnyHint(t *testing.T) {
+	hints := []StatusHint{{Key: "q", Desc: "quit"}}
+	result := renderStatusBar(hints, 1)
+	if result != "" {
+		t.Errorf("expected empty string when width too narrow for any hint, got %q", result)
+	}
+}
+
 func TestRenderStatusBar_ZeroWidth(t *testing.T) {
 	hints := []StatusHint{{Key: "q", Desc: "quit"}}
 	result := renderStatusBar(hints, 0)

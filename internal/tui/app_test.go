@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/spinner"
 
 	"github.com/grantlucas/loom/internal/datasource"
 )
@@ -1569,6 +1570,13 @@ func TestTab_Shortcut(t *testing.T) {
 	}
 }
 
+func TestTab_Shortcut_OutOfBounds(t *testing.T) {
+	got := Tab(99).Shortcut()
+	if got != "" {
+		t.Errorf("out-of-bounds Tab.Shortcut() = %q, want empty string", got)
+	}
+}
+
 func TestApp_TabBarShowsShortcuts(t *testing.T) {
 	app := newTestApp()
 	view := app.View()
@@ -1873,5 +1881,14 @@ func TestApp_FilterInput_RendersInInfoBar(t *testing.T) {
 	view := app.View()
 	if !strings.Contains(view, "Filter:") {
 		t.Error("expected 'Filter:' in app view when filter mode active")
+	}
+}
+
+func TestApp_Update_SpinnerTick(t *testing.T) {
+	app := newTestApp()
+	msg := spinner.TickMsg{ID: app.spinner.ID()}
+	model, _ := app.Update(msg)
+	if model == nil {
+		t.Fatal("expected non-nil model from spinner tick")
 	}
 }

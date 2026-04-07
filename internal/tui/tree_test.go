@@ -511,6 +511,34 @@ func TestTreeView_StatusInfo_NoIssues(t *testing.T) {
 	}
 }
 
+func TestTreeView_StatusInfo_RootIDSet(t *testing.T) {
+	tv := NewTreeView()
+	tv.issues = map[string]datasource.Issue{"a-1": {ID: "a-1"}}
+	tv.rootID = "a-1"
+	info := tv.StatusInfo()
+	if info != "1 nodes, 1 roots" {
+		t.Errorf("expected '1 nodes, 1 roots', got: %q", info)
+	}
+}
+
+func TestTreeView_Resize_HeightZero_ClampsToOne(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{{ID: "a-1"}})
+	tv.Resize(80, 0)
+	if tv.viewport.Height != 1 {
+		t.Errorf("expected viewport height 1 for zero height, got: %d", tv.viewport.Height)
+	}
+}
+
+func TestTreeView_Resize_HeightOne_ClampsToOne(t *testing.T) {
+	tv := NewTreeView()
+	tv.SetIssues([]datasource.Issue{{ID: "a-1"}})
+	tv.Resize(80, 1)
+	if tv.viewport.Height != 1 {
+		t.Errorf("expected viewport height 1 for height=1, got: %d", tv.viewport.Height)
+	}
+}
+
 // --- Ctrl-D / Ctrl-U page scroll cursor tracking ---
 
 func newLargeTreeView() *TreeView {

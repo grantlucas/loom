@@ -462,6 +462,19 @@ func TestBdExecutorDatabaseLock_ReturnsErrDatabaseLocked(t *testing.T) {
 	}
 }
 
+func TestBdExecutorGenericError_ReturnsWrappedError(t *testing.T) {
+	// /dev/null exists but is not executable — produces a permission error
+	// that is neither ErrNotFound, a not-exist PathError, nor an ExitError.
+	exec := &BdExecutor{BinPath: "/dev/null"}
+	_, err := exec.Execute("list")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "bd [list]") {
+		t.Errorf("expected error to contain 'bd [list]', got: %v", err)
+	}
+}
+
 func TestParseIssueListInvalidJSON(t *testing.T) {
 	_, err := ParseIssueList([]byte(`not json`))
 	if err == nil {
