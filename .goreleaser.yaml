@@ -1,0 +1,58 @@
+version: 2
+
+project_name: loom
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/loom/
+    binary: loom
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+archives:
+  - name_template: >-
+      {{- .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end -}}
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+brews:
+  - name: loom
+    repository:
+      owner: grantlucas
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/grantlucas/loom"
+    description: "A terminal UI for exploring beads issue dependencies"
+    license: "GPL-3.0-or-later"
+    install: |
+      bin.install "loom"
+    test: |
+      system bin/"loom", "--version"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
