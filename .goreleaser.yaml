@@ -50,7 +50,7 @@ brews:
     directory: Formula
     homepage: "https://github.com/grantlucas/loom"
     description: "A terminal UI for exploring beads issue dependencies"
-    license: "GPL-3.0-or-later"
+    license: "MIT"
     install: |
       bin.install "loom"
     test: |
