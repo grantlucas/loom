@@ -625,10 +625,8 @@ func TestApp_Update_TickMsg_WatchOn_Fetches(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected command from TickMsg when watch is on")
 	}
-	if ds.callCount < 1 {
-		// The cmd is batched (fetch + next tick), execute to verify fetch happens
-		// We can't easily decompose tea.Batch, but we verified cmd is non-nil
-	}
+	// The cmd is batched (fetch + next tick); we can't easily decompose
+	// tea.Batch, but we verified cmd is non-nil above.
 }
 
 func TestApp_Update_TickMsg_WatchOff_Noop(t *testing.T) {

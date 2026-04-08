@@ -35,10 +35,6 @@ var (
 				Foreground(lipgloss.Color("46")).
 				Padding(0, 1)
 
-	// Status bar at bottom
-	statusBarStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("243"))
-
 	// Detail view styles
 	detailTitleStyle = lipgloss.NewStyle().
 				Bold(true).

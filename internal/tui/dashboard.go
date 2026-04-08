@@ -91,7 +91,7 @@ func (d *DashboardView) renderStatus(b *strings.Builder) {
 	open, inProgress, closed := d.statusCounts()
 	b.WriteString(renderSectionHeader("Status", d.width))
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("  Open: %d   In Progress: %d   Closed: %d\n", open, inProgress, closed))
+	fmt.Fprintf(b, "  Open: %d   In Progress: %d   Closed: %d\n", open, inProgress, closed)
 	b.WriteString("\n")
 }
 
@@ -139,7 +139,7 @@ func (d *DashboardView) renderPriority(b *strings.Builder) {
 			barLen = 1
 		}
 		bar := dashboardBarStyle.Render(strings.Repeat("█", barLen))
-		b.WriteString(fmt.Sprintf("  %s %s %d\n", StyledPriority(p), bar, count))
+		fmt.Fprintf(b, "  %s %s %d\n", StyledPriority(p), bar, count)
 	}
 	b.WriteString("\n")
 }
@@ -165,7 +165,7 @@ func (d *DashboardView) renderReadyQueue(b *strings.Builder) {
 		limit = len(d.ready)
 	}
 	for _, issue := range d.ready[:limit] {
-		b.WriteString(fmt.Sprintf("  %-14s %s  %s\n", issue.ID, StyledPriority(issue.Priority), issue.Title))
+		fmt.Fprintf(b, "  %-14s %s  %s\n", issue.ID, StyledPriority(issue.Priority), issue.Title)
 	}
 	b.WriteString("\n")
 }
@@ -185,7 +185,7 @@ func (d *DashboardView) renderBlocked(b *strings.Builder) {
 		return
 	}
 	for _, bi := range blocked {
-		b.WriteString(fmt.Sprintf("  %-14s Waiting for: %s\n", bi.issue.ID, strings.Join(bi.blockedBy, ", ")))
+		fmt.Fprintf(b, "  %-14s Waiting for: %s\n", bi.issue.ID, strings.Join(bi.blockedBy, ", "))
 	}
 	b.WriteString("\n")
 }
@@ -218,7 +218,7 @@ func (d *DashboardView) renderStats(b *strings.Builder) {
 	b.WriteString(renderSectionHeader("Stats", d.width))
 	b.WriteString("\n")
 	chain := d.longestChain()
-	b.WriteString(fmt.Sprintf("  Longest chain: %d   Total: %d\n", chain, len(d.issues)))
+	fmt.Fprintf(b, "  Longest chain: %d   Total: %d\n", chain, len(d.issues))
 }
 
 func (d *DashboardView) longestChain() int {

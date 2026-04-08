@@ -245,22 +245,22 @@ func (v *DetailView) renderContent() string {
 	b.WriteString("\n\n")
 
 	// Metadata
-	b.WriteString(fmt.Sprintf("%s %s   %s %s   %s %s\n",
+	fmt.Fprintf(&b, "%s %s   %s %s   %s %s\n",
 		detailLabelStyle.Render("Status:"), d.Status,
 		detailLabelStyle.Render("Priority:"), StyledPriority(d.Priority),
 		detailLabelStyle.Render("Type:"), d.IssueType,
-	))
-	b.WriteString(fmt.Sprintf("%s %s   %s %s\n",
+	)
+	fmt.Fprintf(&b, "%s %s   %s %s\n",
 		detailLabelStyle.Render("Assignee:"), d.Assignee,
 		detailLabelStyle.Render("Owner:"), d.Owner,
-	))
-	b.WriteString(fmt.Sprintf("%s %s by %s   %s %s\n",
+	)
+	fmt.Fprintf(&b, "%s %s by %s   %s %s\n",
 		detailLabelStyle.Render("Created:"), d.CreatedAt.Format("2006-01-02"),
 		d.CreatedBy,
 		detailLabelStyle.Render("Updated:"), d.UpdatedAt.Format("2006-01-02"),
-	))
+	)
 	if d.Parent != "" {
-		b.WriteString(fmt.Sprintf("%s %s\n", detailLabelStyle.Render("Parent:"), d.Parent))
+		fmt.Fprintf(&b, "%s %s\n", detailLabelStyle.Render("Parent:"), d.Parent)
 	}
 
 	// Description

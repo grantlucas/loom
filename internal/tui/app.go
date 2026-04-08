@@ -435,7 +435,7 @@ func (a App) renderHelp() string {
 		sb.WriteString(renderSectionHeader(title, a.width))
 		sb.WriteString("\n")
 		for _, e := range entries {
-			sb.WriteString(fmt.Sprintf("  %-10s %s\n", e.key, e.desc))
+			fmt.Fprintf(&sb, "  %-10s %s\n", e.key, e.desc)
 		}
 		return sb.String()
 	}

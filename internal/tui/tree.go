@@ -95,7 +95,7 @@ func (tv *TreeView) SetIssues(issues []datasource.Issue) {
 
 	for _, issue := range issues {
 		for _, dep := range issue.Dependencies {
-			tv.dag.AddEdge(dep.DependsOnID, dep.IssueID)
+			_ = tv.dag.AddEdge(dep.DependsOnID, dep.IssueID)
 		}
 	}
 
@@ -266,9 +266,9 @@ func (tv *TreeView) renderStats(b *strings.Builder) {
 	} else if tv.dag != nil {
 		roots = len(tv.dag.Roots())
 	}
-	b.WriteString(fmt.Sprintf("  %d nodes, %d roots", totalNodes, roots))
+	fmt.Fprintf(b, "  %d nodes, %d roots", totalNodes, roots)
 	if tv.rootID != "" {
-		b.WriteString(fmt.Sprintf(" (rooted: %s)", tv.rootID))
+		fmt.Fprintf(b, " (rooted: %s)", tv.rootID)
 	}
 	b.WriteString("\n")
 }

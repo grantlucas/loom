@@ -32,7 +32,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 	}
 
 	if cfg.Version {
-		fmt.Fprintf(stdout, "loom %s\n", version)
+		_, _ = fmt.Fprintf(stdout, "loom %s\n", version)
 		return nil
 	}
 

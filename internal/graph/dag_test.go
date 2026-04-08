@@ -75,7 +75,7 @@ func TestDAG_AddEdge_SelfLoop(t *testing.T) {
 
 func TestDAG_AddEdge_Duplicate(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "b")
 	err := g.AddEdge("a", "b")
 	if err != nil {
 		t.Error("duplicate edge should be a no-op, not an error")
@@ -84,8 +84,8 @@ func TestDAG_AddEdge_Duplicate(t *testing.T) {
 
 func TestDAG_EdgeCount(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("b", "c")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("b", "c")
 	if g.EdgeCount() != 2 {
 		t.Errorf("expected 2 edges, got %d", g.EdgeCount())
 	}
@@ -93,8 +93,8 @@ func TestDAG_EdgeCount(t *testing.T) {
 
 func TestDAG_EdgeCount_NoDuplicates(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "b")
 	if g.EdgeCount() != 1 {
 		t.Errorf("expected 1 edge after duplicate add, got %d", g.EdgeCount())
 	}
@@ -104,8 +104,8 @@ func TestDAG_EdgeCount_NoDuplicates(t *testing.T) {
 
 func TestDAG_Successors(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("a", "c")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "c")
 	succ := g.Successors("a")
 	sort.Strings(succ)
 	if len(succ) != 2 || succ[0] != "b" || succ[1] != "c" {
@@ -132,8 +132,8 @@ func TestDAG_Successors_MissingNode(t *testing.T) {
 
 func TestDAG_Predecessors(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "c")
-	g.AddEdge("b", "c")
+	_ = g.AddEdge("a", "c")
+	_ = g.AddEdge("b", "c")
 	pred := g.Predecessors("c")
 	sort.Strings(pred)
 	if len(pred) != 2 || pred[0] != "a" || pred[1] != "b" {
@@ -162,9 +162,9 @@ func TestDAG_Predecessors_MissingNode(t *testing.T) {
 
 func TestDAG_Roots(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("a", "c")
-	g.AddEdge("b", "d")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "c")
+	_ = g.AddEdge("b", "d")
 	roots := g.Roots()
 	if len(roots) != 1 || roots[0] != "a" {
 		t.Errorf("expected [a], got %v", roots)
@@ -173,8 +173,8 @@ func TestDAG_Roots(t *testing.T) {
 
 func TestDAG_Roots_Multiple(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "c")
-	g.AddEdge("b", "c")
+	_ = g.AddEdge("a", "c")
+	_ = g.AddEdge("b", "c")
 	roots := g.Roots()
 	sort.Strings(roots)
 	if len(roots) != 2 || roots[0] != "a" || roots[1] != "b" {
@@ -201,8 +201,8 @@ func TestDAG_Roots_Empty(t *testing.T) {
 
 func TestDAG_Sinks(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("a", "c")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "c")
 	sinks := g.Sinks()
 	sort.Strings(sinks)
 	if len(sinks) != 2 || sinks[0] != "b" || sinks[1] != "c" {
@@ -231,8 +231,8 @@ func TestDAG_Sinks_Empty(t *testing.T) {
 
 func TestDAG_TopoSort_Linear(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("b", "c")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("b", "c")
 	order, err := g.TopoSort()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -249,10 +249,10 @@ func TestDAG_TopoSort_Linear(t *testing.T) {
 
 func TestDAG_TopoSort_Diamond(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("a", "c")
-	g.AddEdge("b", "d")
-	g.AddEdge("c", "d")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "c")
+	_ = g.AddEdge("b", "d")
+	_ = g.AddEdge("c", "d")
 	order, err := g.TopoSort()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -291,7 +291,7 @@ func TestDAG_TopoSort_SingleNode(t *testing.T) {
 
 func TestDAG_TopoSort_Disconnected(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
+	_ = g.AddEdge("a", "b")
 	g.AddNode("c")
 	order, err := g.TopoSort()
 	if err != nil {
@@ -310,8 +310,8 @@ func TestDAG_TopoSort_Disconnected(t *testing.T) {
 
 func TestDAG_DetectCycle_NoCycle(t *testing.T) {
 	g := NewDAG()
-	g.AddEdge("a", "b")
-	g.AddEdge("b", "c")
+	_ = g.AddEdge("a", "b")
+	_ = g.AddEdge("b", "c")
 	cycle := g.DetectCycle()
 	if cycle != nil {
 		t.Errorf("expected no cycle, got %v", cycle)
