@@ -80,10 +80,10 @@ func (d *DashboardView) View() string {
 
 	var b strings.Builder
 	d.renderStatus(&b)
+	d.renderInProgress(&b)
 	d.renderPriority(&b)
 	d.renderReadyQueue(&b)
 	d.renderBlocked(&b)
-	d.renderStats(&b)
 	return b.String()
 }
 
@@ -107,6 +107,39 @@ func (d *DashboardView) statusCounts() (open, inProgress, closed int) {
 		}
 	}
 	return
+}
+
+func (d *DashboardView) inProgressIssues() []datasource.Issue {
+	var result []datasource.Issue
+	for _, issue := range d.issues {
+		if issue.Status == "in_progress" {
+			result = append(result, issue)
+		}
+	}
+	return result
+}
+
+func (d *DashboardView) renderInProgress(b *strings.Builder) {
+	b.WriteString(renderSectionHeader("In Progress", d.width))
+	b.WriteString("\n")
+	active := d.inProgressIssues()
+	if len(active) == 0 {
+		b.WriteString("  None\n")
+		b.WriteString("\n")
+		return
+	}
+	limit := 5
+	if len(active) < limit {
+		limit = len(active)
+	}
+	for _, issue := range active[:limit] {
+		assignee := issue.Assignee
+		if assignee == "" {
+			assignee = "unassigned"
+		}
+		fmt.Fprintf(b, "  %-14s %s  %-12s %s\n", issue.ID, StyledPriority(issue.Priority), assignee, issue.Title)
+	}
+	b.WriteString("\n")
 }
 
 func (d *DashboardView) renderPriority(b *strings.Builder) {
@@ -214,52 +247,3 @@ func (d *DashboardView) blockedIssues() []blockedInfo {
 	return result
 }
 
-func (d *DashboardView) renderStats(b *strings.Builder) {
-	b.WriteString(renderSectionHeader("Stats", d.width))
-	b.WriteString("\n")
-	chain := d.longestChain()
-	fmt.Fprintf(b, "  Longest chain: %d   Total: %d\n", chain, len(d.issues))
-}
-
-func (d *DashboardView) longestChain() int {
-	// Build adjacency: issue -> what it depends on
-	deps := make(map[string][]string)
-	for _, issue := range d.issues {
-		for _, dep := range issue.Dependencies {
-			deps[dep.IssueID] = append(deps[dep.IssueID], dep.DependsOnID)
-		}
-	}
-
-	memo := make(map[string]int)
-	visiting := make(map[string]bool)
-
-	var dfs func(id string) int
-	dfs = func(id string) int {
-		if visiting[id] {
-			return 0
-		}
-		if v, ok := memo[id]; ok {
-			return v
-		}
-		visiting[id] = true
-		maxDepth := 0
-		for _, depID := range deps[id] {
-			depth := dfs(depID)
-			if depth > maxDepth {
-				maxDepth = depth
-			}
-		}
-		visiting[id] = false
-		memo[id] = maxDepth + 1
-		return maxDepth + 1
-	}
-
-	longest := 0
-	for _, issue := range d.issues {
-		depth := dfs(issue.ID)
-		if depth > longest {
-			longest = depth
-		}
-	}
-	return longest
-}

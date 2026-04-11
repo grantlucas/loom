@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -323,66 +324,99 @@ func TestDashboardView_BlockedIssues_Empty(t *testing.T) {
 	}
 }
 
-// --- Longest chain ---
+// --- In Progress ---
 
-func TestDashboardView_LongestChain_Linear(t *testing.T) {
+func TestDashboardView_InProgress_Empty(t *testing.T) {
 	dv := NewDashboardView()
-	dv.SetIssues([]datasource.Issue{
-		{ID: "a", Status: "open"},
-		{ID: "b", Status: "open", Dependencies: []datasource.RawDependency{
-			{IssueID: "b", DependsOnID: "a"},
-		}},
-		{ID: "c", Status: "open", Dependencies: []datasource.RawDependency{
-			{IssueID: "c", DependsOnID: "b"},
-		}},
-	})
+	dv.SetIssues([]datasource.Issue{{ID: "1", Status: "open"}})
 	out := dv.View()
-	if !strings.Contains(out, "Longest chain: 3") {
-		t.Errorf("should show longest chain of 3, got:\n%s", out)
+	// Section header uses "── In Progress ──..." format
+	if !strings.Contains(out, "── In Progress") {
+		t.Error("should contain In Progress section header")
+	}
+	// In Progress section should appear between Status and Priority
+	statusIdx := strings.Index(out, "── Status")
+	inProgressIdx := strings.Index(out, "── In Progress")
+	priorityIdx := strings.Index(out, "── Priority")
+	if inProgressIdx <= statusIdx || inProgressIdx >= priorityIdx {
+		t.Error("In Progress section should appear between Status and Priority")
+	}
+	// Should show "None" when no in-progress issues
+	// Extract text between In Progress header and Priority header
+	section := out[inProgressIdx:priorityIdx]
+	if !strings.Contains(section, "None") {
+		t.Error("should show 'None' when no in-progress issues")
 	}
 }
 
-func TestDashboardView_LongestChain_NoDeps(t *testing.T) {
+func TestDashboardView_InProgress_ShowsIssues(t *testing.T) {
 	dv := NewDashboardView()
 	dv.SetIssues([]datasource.Issue{
-		{ID: "a", Status: "open"},
-		{ID: "b", Status: "open"},
+		{ID: "ip-1", Status: "in_progress", Priority: 1, Assignee: "alice", Title: "Fix login bug"},
+		{ID: "ip-2", Status: "in_progress", Priority: 0, Assignee: "bob", Title: "Deploy hotfix"},
+		{ID: "other", Status: "open", Title: "Not in progress"},
 	})
 	out := dv.View()
-	if !strings.Contains(out, "Longest chain: 1") {
-		t.Errorf("should show longest chain of 1, got:\n%s", out)
+	inProgressIdx := strings.Index(out, "── In Progress")
+	priorityIdx := strings.Index(out, "── Priority")
+	section := out[inProgressIdx:priorityIdx]
+	if !strings.Contains(section, "ip-1") {
+		t.Error("should show in-progress issue ID ip-1")
+	}
+	if !strings.Contains(section, "Fix login bug") {
+		t.Error("should show in-progress issue title")
+	}
+	if !strings.Contains(section, "alice") {
+		t.Error("should show assignee")
+	}
+	if !strings.Contains(section, "ip-2") {
+		t.Error("should show second in-progress issue")
+	}
+	if strings.Contains(section, "other") {
+		t.Error("should not show non-in-progress issues")
+	}
+	if strings.Contains(section, "None") {
+		t.Error("should not show 'None' when there are in-progress issues")
 	}
 }
 
-func TestDashboardView_LongestChain_Cycle(t *testing.T) {
+func TestDashboardView_InProgress_UnassignedLabel(t *testing.T) {
 	dv := NewDashboardView()
 	dv.SetIssues([]datasource.Issue{
-		{ID: "a", Status: "open", Dependencies: []datasource.RawDependency{
-			{IssueID: "a", DependsOnID: "b"},
-		}},
-		{ID: "b", Status: "open", Dependencies: []datasource.RawDependency{
-			{IssueID: "b", DependsOnID: "a"},
-		}},
+		{ID: "ip-1", Status: "in_progress", Priority: 2, Assignee: "", Title: "Unowned task"},
 	})
-	// Should not panic or infinite loop
 	out := dv.View()
-	if !strings.Contains(out, "Longest chain:") {
-		t.Error("should still render longest chain stat even with cycles")
+	inProgressIdx := strings.Index(out, "── In Progress")
+	priorityIdx := strings.Index(out, "── Priority")
+	section := out[inProgressIdx:priorityIdx]
+	if !strings.Contains(section, "unassigned") {
+		t.Error("should show 'unassigned' when assignee is empty")
 	}
 }
 
-// --- Total count ---
-
-func TestDashboardView_TotalCount(t *testing.T) {
+func TestDashboardView_InProgress_MaxFive(t *testing.T) {
 	dv := NewDashboardView()
-	dv.SetIssues([]datasource.Issue{
-		{ID: "1", Status: "open"},
-		{ID: "2", Status: "closed"},
-		{ID: "3", Status: "in_progress"},
-	})
+	issues := make([]datasource.Issue, 7)
+	for i := range issues {
+		issues[i] = datasource.Issue{
+			ID:     fmt.Sprintf("ip-%d", i),
+			Status: "in_progress",
+			Title:  "Task",
+		}
+	}
+	dv.SetIssues(issues)
 	out := dv.View()
-	if !strings.Contains(out, "Total: 3") {
-		t.Errorf("should show total count of 3, got:\n%s", out)
+	inProgressIdx := strings.Index(out, "── In Progress")
+	priorityIdx := strings.Index(out, "── Priority")
+	section := out[inProgressIdx:priorityIdx]
+	count := 0
+	for _, line := range strings.Split(section, "\n") {
+		if strings.Contains(line, "ip-") {
+			count++
+		}
+	}
+	if count > 5 {
+		t.Errorf("in-progress section should show at most 5 items, got %d", count)
 	}
 }
 
@@ -392,7 +426,7 @@ func TestDashboardView_AllSectionHeaders(t *testing.T) {
 	dv := NewDashboardView()
 	dv.SetIssues([]datasource.Issue{{ID: "1", Status: "open"}})
 	out := dv.View()
-	for _, header := range []string{"Status", "Priority", "Ready Queue", "Blocked", "Stats"} {
+	for _, header := range []string{"Status", "In Progress", "Priority", "Ready Queue", "Blocked"} {
 		if !strings.Contains(out, header) {
 			t.Errorf("should contain section header %q", header)
 		}
